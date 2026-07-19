@@ -1,0 +1,219 @@
+// PartyGen 客户端主逻辑:房间连接、状态渲染、生成流程
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const screens = { lobby: $('screen-lobby'), room: $('screen-room'), game: $('screen-game') };
+  let ws = null, meId = localStorage.getItem('pg_pid') || null, meName = '', isHost = false;
+  let roomCode = '', lastSeq = 0;
+  const ctx = { send: sendAction, rerender: () => {}, meId: null, meName: '', strokes: [] };
+  let lastGame = null, lastYou = null;
+
+  function show(name) {
+    Object.values(screens).forEach((s) => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  function toast(msg, ms = 2600) {
+    const t = $('toast');
+    t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.add('hidden'), ms);
+  }
+
+  // ---------- 大厅 ----------
+  $('nameInput').value = localStorage.getItem('pg_name') || '';
+  const IDEAS = ['周杰伦歌曲猜歌大赛', '美食主题谁是卧底', '动漫你画我猜', '土味情话数字炸弹', '朋友互吐槽投票', '看emoji猜电影'];
+  IDEAS.forEach((t) => {
+    const c = document.createElement('span');
+    c.className = 'chip'; c.textContent = t;
+    c.onclick = () => { $('ideaInput').value = t; };
+    $('ideaChips').append(c);
+  });
+
+  async function createRoom() {
+    const res = await fetch('/api/rooms', { method: 'POST' });
+    const { code } = await res.json();
+    join(code);
+  }
+
+  function join(code) {
+    meName = $('nameInput').value.trim() || '玩家' + Math.floor(Math.random() * 99);
+    localStorage.setItem('pg_name', meName);
+    roomCode = code;
+    connect();
+  }
+
+  $('btnCreate').onclick = createRoom;
+  $('btnJoin').onclick = () => {
+    const code = $('codeInput').value.trim();
+    if (code.length === 4) join(code); else toast('请输入 4 位房间号');
+  };
+
+  // ---------- WebSocket ----------
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code: roomCode, name: meName, playerId: meId }));
+    ws.onmessage = (e) => handle(JSON.parse(e.data));
+    ws.onclose = () => setTimeout(() => { if (roomCode) connect(); }, 1500);
+  }
+
+  function sendAction(action) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'action', action }));
+  }
+
+  function handle(msg) {
+    if (msg.type === 'error') return toast(msg.error);
+    if (msg.type === 'joined') {
+      meId = msg.playerId; ctx.meId = meId; ctx.meName = meName;
+      localStorage.setItem('pg_pid', meId);
+      isHost = msg.isHost;
+      $('roomCode').textContent = msg.code;
+      $('hostGen').classList.toggle('hidden', !isHost);
+      $('guestWait').classList.toggle('hidden', isHost);
+      show('room');
+      history.replaceState(null, '', `?room=${msg.code}`);
+      return;
+    }
+    if (msg.type === 'members') return renderSeats(msg.members);
+    if (msg.type === 'generating') {
+      $('genStatus').classList.remove('hidden');
+      $('genResult').classList.add('hidden');
+      $('guestWait').classList.add('hidden');
+      $('genStatusText').textContent = `AI 正在设计:「${msg.idea}」…`;
+      return;
+    }
+    if (msg.type === 'generated') {
+      $('genStatus').classList.add('hidden');
+      $('genResult').classList.remove('hidden');
+      $('guestWait').classList.add('hidden');
+      $('genTemplate').textContent = `🎮 ${msg.templateName}${msg.demo ? ' · 演示内容' : ' · AI 生成'}`;
+      $('genTitle').textContent = msg.title;
+      $('genReason').textContent = msg.reason || '';
+      $('btnStart').classList.toggle('hidden', !isHost);
+      show('room');
+      return;
+    }
+    if (msg.type === 'generateFailed') {
+      $('genStatus').classList.add('hidden');
+      toast('生成失败:' + msg.error);
+      return;
+    }
+    if (msg.type === 'gameStopped') { lastGame = null; show('room'); return; }
+    if (msg.type === 'game') return renderGame(msg.game, msg.you);
+  }
+
+  // ---------- 房间渲染 ----------
+  function renderSeats(members) {
+    const wrap = $('seats');
+    wrap.innerHTML = '';
+    const slots = Math.max(8, members.length);
+    for (let i = 0; i < slots; i++) {
+      const m = members[i];
+      const seat = document.createElement('div');
+      if (m) {
+        seat.className = 'seat' + (m.isHost ? ' host' : '') + (m.online ? '' : ' offline');
+        seat.innerHTML = `<div class="avatar">${escapeHtml(m.name[0] || '?')}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
+      } else {
+        seat.className = 'seat empty';
+        seat.innerHTML = `<div class="avatar">+</div><div class="seat-name">空位</div>`;
+      }
+      wrap.append(seat);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ---------- 生成 ----------
+  $('btnGenerate').onclick = async () => {
+    const idea = $('ideaInput').value.trim();
+    if (!idea) return toast('先描述一下想玩什么~');
+    $('btnGenerate').disabled = true;
+    try {
+      const res = await fetch(`/api/rooms/${roomCode}/generate`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ idea }),
+      });
+      if (!res.ok) toast((await res.json()).error || '生成失败');
+    } finally { $('btnGenerate').disabled = false; }
+  };
+
+  $('btnStart').onclick = () => ws.send(JSON.stringify({ type: 'start' }));
+  $('btnStop').onclick = () => ws.send(JSON.stringify({ type: 'stopGame' }));
+  $('btnShare').onclick = async () => {
+    const url = `${location.origin}?room=${roomCode}`;
+    try { await navigator.clipboard.writeText(`来我的 PartyGen 房间玩游戏!房间号 ${roomCode}\n${url}`); toast('邀请已复制'); }
+    catch { toast(`房间号 ${roomCode}`); }
+  };
+
+  // ---------- 游戏渲染 ----------
+  function renderGame(game, you) {
+    if (game.seq && game.seq <= lastSeq) return;
+    lastSeq = game.seq || 0;
+
+    // 增量笔画:同一局 draw 视图下只补画,不整页重绘
+    const ui = game.ui || {};
+    const isSameDrawView = lastGame && ui.view === 'draw' && lastGame.ui?.view === 'draw'
+      && lastGame.ui.drawerId === ui.drawerId && lastGame.ui.timer !== undefined;
+    lastGame = game; lastYou = you;
+    show('game');
+    $('gameTitle').textContent = game.title || '';
+    $('btnStop').classList.toggle('hidden', !isHost);
+
+    const timerEl = $('gameTimer');
+    timerEl.textContent = ui.timer != null && ui.timer >= 0 ? ui.timer : '';
+    timerEl.classList.toggle('low', ui.timer != null && ui.timer <= 5);
+
+    if (game.toast) toast(game.toast);
+
+    // 私有信息条(你的词/你来画)
+    const pb = $('privateBar');
+    if (you && (you.word || you.hint)) {
+      pb.classList.remove('hidden');
+      pb.innerHTML = `${escapeHtml(you.hint || '')} <b>${escapeHtml(you.word || '')}</b>`;
+    } else pb.classList.add('hidden');
+
+    // 计分条
+    const sb = $('scorebar');
+    sb.innerHTML = '';
+    (game.players || []).forEach((p) => {
+      const el = document.createElement('span');
+      el.className = 'sc';
+      el.innerHTML = `${escapeHtml(p.name)} <b>${game.scores?.[p.id] ?? 0}</b>`;
+      sb.append(el);
+    });
+
+    if (isSameDrawView) {
+      // 只处理增量:新笔画 / 清空
+      if (ui.clear !== lastClear) { ctx.onClear && ctx.onClear(); ctx.strokes = []; lastClear = ui.clear; }
+      if (ui.lastStroke && ctx.onStroke) { ctx.strokes.push(ui.lastStroke); ctx.onStroke(ui.lastStroke); }
+      // 聊天/计时更新仍需重绘文本区,简化处理:每 tick 不重建 canvas,聊天区下轮重建
+      return;
+    }
+
+    // 全量渲染
+    const view = ui.view;
+    const root = $('gameView');
+    root.innerHTML = '';
+    // 视图切换时重置一次性状态
+    if (!lastView || lastView !== view || ui.seq !== lastViewSeq || ui.title !== lastViewTitle) {
+      ctx.myChoice = null; ctx.myVote = null;
+    }
+    lastView = view; lastViewSeq = ui.seq; lastViewTitle = ui.title;
+    ctx.strokes = view === 'draw' ? collectStrokes(ui) : [];
+    ctx.rerender = () => { const r = window.GameRenderers[view]; if (r) { root.innerHTML = ''; r(ui, ctx, root); } };
+    const renderer = window.GameRenderers[view];
+    if (renderer) renderer(ui, ctx, root);
+    else root.innerHTML = `<p class="g-sub">加载中…</p>`;
+  }
+  let lastView = null, lastViewSeq = null, lastViewTitle = null, lastClear = 0;
+  function collectStrokes(ui) { return ctx.strokes || []; }
+
+  // URL 直达房间
+  const params = new URLSearchParams(location.search);
+  const roomParam = params.get('room');
+  if (roomParam) {
+    $('codeInput').value = roomParam;
+    if (localStorage.getItem('pg_name')) join(roomParam);
+  }
+})();

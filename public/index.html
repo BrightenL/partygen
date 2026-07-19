@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>PartyGen · 语音房 AI 派对游戏</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div id="app">
+  <!-- 大厅 -->
+  <section id="screen-lobby" class="screen active">
+    <div class="hero">
+      <div class="logo">🎪</div>
+      <h1>PartyGen</h1>
+      <p class="tagline">一句话,生成全房间能玩的派对游戏</p>
+    </div>
+    <div class="card">
+      <input id="nameInput" class="input" maxlength="12" placeholder="你的昵称">
+      <button id="btnCreate" class="btn btn-primary">创建房间</button>
+      <div class="divider"><span>或</span></div>
+      <div class="row">
+        <input id="codeInput" class="input" inputmode="numeric" maxlength="4" placeholder="房间号">
+        <button id="btnJoin" class="btn btn-ghost">加入</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 房间 -->
+  <section id="screen-room" class="screen">
+    <header class="room-header">
+      <div>
+        <div class="room-code">房间 <b id="roomCode"></b></div>
+        <div class="room-sub" id="roomSub">把房间号发给朋友加入</div>
+      </div>
+      <button id="btnShare" class="btn btn-mini">复制邀请</button>
+    </header>
+
+    <div id="seats" class="seats"></div>
+
+    <!-- 房主生成区 / 等待区 -->
+    <div id="genPanel" class="card">
+      <div id="hostGen">
+        <label class="label">✨ 描述你想玩的游戏</label>
+        <textarea id="ideaInput" class="input textarea" rows="2" maxlength="200"
+          placeholder="例如:来一个关于周杰伦歌曲的猜歌游戏 / 玩谁是卧底,词要美食相关"></textarea>
+        <div class="chips" id="ideaChips"></div>
+        <button id="btnGenerate" class="btn btn-primary">生成游戏</button>
+      </div>
+      <div id="guestWait" class="hidden center muted">等待房主生成游戏…</div>
+      <div id="genStatus" class="hidden gen-status">
+        <div class="spinner"></div>
+        <div id="genStatusText">AI 正在设计游戏…</div>
+      </div>
+      <div id="genResult" class="hidden gen-result">
+        <div class="gen-badge" id="genTemplate"></div>
+        <h3 id="genTitle"></h3>
+        <p class="muted" id="genReason"></p>
+        <button id="btnStart" class="btn btn-primary">开始游戏</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 游戏 -->
+  <section id="screen-game" class="screen">
+    <header class="game-header">
+      <div class="game-title" id="gameTitle"></div>
+      <div class="timer" id="gameTimer"></div>
+    </header>
+    <div id="privateBar" class="private-bar hidden"></div>
+    <main id="gameView" class="game-view"></main>
+    <footer class="game-footer">
+      <div id="scorebar" class="scorebar"></div>
+      <button id="btnStop" class="btn btn-mini btn-danger hidden">结束游戏</button>
+    </footer>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+<script src="/js/games.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
