@@ -2,7 +2,8 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const screens = { lobby: $('screen-lobby'), room: $('screen-room'), game: $('screen-game') };
-  let ws = null, meId = localStorage.getItem('pg_pid') || null, meName = '', isHost = false;
+  // pg_pid 用 sessionStorage:每个标签页是独立玩家(localStorage 会让同浏览器多标签页互相顶号)
+  let ws = null, meId = sessionStorage.getItem('pg_pid') || null, meName = '', isHost = false;
   let roomCode = '', lastSeq = 0;
   const ctx = { send: sendAction, rerender: () => {}, meId: null, meName: '', strokes: [] };
   let lastGame = null, lastYou = null;
@@ -65,7 +66,7 @@
     if (msg.type === 'rtc') return window.PartyVoice.onSignal(msg.from, msg.data);
     if (msg.type === 'joined') {
       meId = msg.playerId; ctx.meId = meId; ctx.meName = meName;
-      localStorage.setItem('pg_pid', meId);
+      sessionStorage.setItem('pg_pid', meId);
       isHost = msg.isHost;
       $('roomCode').textContent = msg.code;
       $('hostGen').classList.toggle('hidden', !isHost);
