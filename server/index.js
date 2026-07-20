@@ -7,6 +7,7 @@ import path from 'path';
 import { GAMES } from './registry.js';
 import { makeRng } from './engine.js';
 import { generateGame, validateSpec } from './gen/generate.js';
+import * as library from './gen/library.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -77,6 +78,7 @@ function startGame(room) {
   }
   const rng = makeRng(room.seed + Date.now() % 100000);
   room.game = { templateId, title, state: g.init(spec, players.slice(0, g.meta.maxPlayers), rng), rng, seq: 0 };
+  if (room.pendingSpec.libraryId) library.markPlayed(room.pendingSpec.libraryId);
   broadcastState(room);
   return {};
 }
@@ -112,6 +114,7 @@ app.post('/api/rooms/:code/generate', async (req, res) => {
     const out = await generateGame(idea);
     const err = validateSpec(out.templateId, out.spec);
     if (err) return res.status(500).json({ error: `生成结果校验失败:${err}` });
+    out.libraryId = library.record(idea, out);
     room.pendingSpec = out;
     broadcast(room, 'generated', {
       templateId: out.templateId, templateName: GAMES[out.templateId].meta.name,
@@ -123,6 +126,26 @@ app.post('/api/rooms/:code/generate', async (req, res) => {
     broadcast(room, 'generateFailed', { error: e.message });
     res.status(500).json({ error: e.message });
   }
+});
+
+// 热门游戏库
+app.get('/api/library', (req, res) => {
+  res.json({ items: library.list() });
+});
+
+// 从库中选一个游戏(不消耗生成调用)
+app.post('/api/rooms/:code/pick', (req, res) => {
+  const room = rooms.get(req.params.code);
+  if (!room) return res.status(404).json({ error: '房间不存在' });
+  const it = library.get(String(req.body.id || ''));
+  if (!it) return res.status(404).json({ error: '游戏不存在或已下架' });
+  room.pendingSpec = { templateId: it.templateId, title: it.title, reason: it.reason, spec: it.spec, libraryId: it.id };
+  broadcast(room, 'generated', {
+    templateId: it.templateId, templateName: GAMES[it.templateId].meta.name,
+    title: it.title, reason: `来自热门游戏库 · 已开局 ${it.plays} 次`, demo: false,
+    minPlayers: GAMES[it.templateId].meta.minPlayers,
+  });
+  res.json({ ok: true });
 });
 
 // ---------- WebSocket ----------

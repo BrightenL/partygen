@@ -73,6 +73,7 @@
       show('room');
       history.replaceState(null, '', `?room=${msg.code}`);
       initVoice();
+      loadLibrary();
       return;
     }
     if (msg.type === 'members') {
@@ -198,6 +199,31 @@
       if (!res.ok) toast((await res.json()).error || '生成失败');
     } finally { $('btnGenerate').disabled = false; }
   };
+
+  // ---------- 热门游戏库 ----------
+  async function loadLibrary() {
+    if (!isHost) return;
+    try {
+      const { items } = await (await fetch('/api/library')).json();
+      const sec = $('libSection'), list = $('libList');
+      if (!items || !items.length) return sec.classList.add('hidden');
+      sec.classList.remove('hidden');
+      list.innerHTML = '';
+      items.forEach((it) => {
+        const el = document.createElement('button');
+        el.className = 'lib-item';
+        el.innerHTML = `<span class="lib-title">${escapeHtml(it.title)}</span><span class="lib-meta">${it.plays > 0 ? `🔥${it.plays} · ` : ''}${escapeHtml(it.idea)}</span>`;
+        el.onclick = async () => {
+          const res = await fetch(`/api/rooms/${roomCode}/pick`, {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: it.id }),
+          });
+          if (!res.ok) toast((await res.json()).error || '选择失败');
+        };
+        list.append(el);
+      });
+    } catch { /* 库不可用不影响主流程 */ }
+  }
 
   $('btnStart').onclick = () => ws.send(JSON.stringify({ type: 'start' }));
   $('btnStop').onclick = () => ws.send(JSON.stringify({ type: 'stopGame' }));

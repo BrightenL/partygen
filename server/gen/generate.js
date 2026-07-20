@@ -46,7 +46,12 @@ async function callClaude(messages) {
       'x-api-key': API_KEY,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: SYSTEM, messages }),
+    body: JSON.stringify({
+      model: MODEL, max_tokens: 4000,
+      // system 含完整模板说明书且逐次调用不变,打上缓存点降低延迟与成本
+      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
+      messages,
+    }),
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data = await res.json();

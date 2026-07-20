@@ -14,6 +14,7 @@ npm start                          # http://localhost:3000
 
 ```bash
 npm test             # 冒烟测试:9 个模板 × (4人随机行为完整局 + 全员挂机超时保护)
+node test/library.js # 热门游戏库:入库/去重/热度/持久化
 node test/e2e.js     # 端到端:建房 → 多客户端加入 → 生成 → 开局(需先 PORT=3199 npm start)
 node test/voice.js   # 语音信令:语音状态广播 + WebRTC 信令转发(需先 PORT=3199 npm start)
 ```
@@ -69,15 +70,16 @@ server/
   engine.js        确定性状态机基础(rng / baseState / rank)
   registry.js      模板注册表 + 给 LLM 的模板说明书
   games/*.js       9 个玩法模板(纯逻辑,无 IO)
-  gen/generate.js  生成管线(Claude 调用 + schema 校验 + 自修复回路 + 演示模式回退)
-  index.js         房间服务(Express + ws:定序广播、快照、tick 循环、房间回收)
-public/            移动优先前端(大厅 / 房间 / 游戏容器 + 各玩法渲染器)
+  gen/generate.js  生成管线(Claude 调用 + prompt 缓存 + schema 校验 + 自修复回路 + 演示模式回退)
+  gen/library.js   热门游戏库(AI 生成成功即沉淀,可一键复用,按开局热度排序,JSON 落盘)
+  index.js         房间服务(Express + ws:定序广播、快照、tick 循环、语音信令转发、房间回收)
+public/            移动优先前端(大厅 / 房间 / 游戏容器 + 各玩法渲染器 + WebRTC 语音层)
 test/smoke.js      多人随机行为冒烟测试
 ```
 
 ## Demo 之后的路线
 
-语音层接 Agora/ZEGO(本 Demo 刻意不含语音,开着微信语音即可体验完整玩法);生成管线加 prompt 缓存与热门游戏库沉淀;客户端套原生壳(WebView 容器)上双端。
+网状语音迁移 SFU(Agora/ZEGO/LiveKit)支撑更大房间;客户端套原生壳(WebView 容器)上双端;游戏库加人工精选与内容审核。
 
 ## 环境变量
 
@@ -86,4 +88,5 @@ test/smoke.js      多人随机行为冒烟测试
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` | Claude API key,未设置则演示模式 |
 | `ANTHROPIC_BASE_URL` | 自定义 API 网关(可选) |
 | `PARTYGEN_MODEL` | 生成模型,默认 `claude-sonnet-5` |
+| `PARTYGEN_LIBRARY` | 游戏库落盘路径,默认 `data/library.json` |
 | `PORT` | 服务端口,默认 3000 |
