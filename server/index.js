@@ -39,6 +39,7 @@ function createRoom(hostName) {
 function membersView(room) {
   return [...room.members.values()].map((m) => ({
     id: m.id, name: m.name, online: m.online, isHost: m.id === room.hostId,
+    voice: !!m.voice, mic: !!m.mic,
   }));
 }
 
@@ -181,6 +182,21 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // 语音状态(是否开启语音、是否闭麦)→ 广播成员列表
+    if (msg.type === 'voice') {
+      me.voice = !!msg.on;
+      me.mic = !!msg.mic;
+      broadcast(room, 'members', { members: membersView(room) });
+      return;
+    }
+
+    // WebRTC 信令转发:{to, data} → 目标成员收到 {from, data}
+    if (msg.type === 'rtc') {
+      const target = room.members.get(String(msg.to));
+      if (target) send(target.ws, 'rtc', { from: me.id, data: msg.data });
+      return;
+    }
+
     if (msg.type === 'stopGame') {
       if (me.id !== room.hostId || !room.game) return;
       room.game = null;
@@ -192,6 +208,7 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (!room || !me) return;
     me.online = false;
+    me.voice = false;
     broadcast(room, 'members', { members: membersView(room) });
   });
 });

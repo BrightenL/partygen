@@ -58,6 +58,10 @@ h1 { font-size: 34px; letter-spacing: 1px; background: linear-gradient(90deg, #7
 .btn-mini { padding: 8px 12px; font-size: 13px; border-radius: 10px; background: var(--card2); }
 .btn-danger { background: rgba(239,69,101,.15); color: var(--bad); }
 .btn-big { font-size: 20px; padding: 20px; }
+.row-mini { display: flex; gap: 8px; }
+.btn-voice.on { background: rgba(44,182,125,.2); color: var(--good); border: 1px solid rgba(44,182,125,.5); }
+.btn-voice.off-mic { background: rgba(255,137,6,.15); color: var(--accent); border-color: rgba(255,137,6,.45); }
+.avatar .mic { position: absolute; bottom: -4px; right: -6px; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
 
 /* 房间 */
 .room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }

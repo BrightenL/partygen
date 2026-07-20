@@ -33,7 +33,10 @@
         <div class="room-code">房间 <b id="roomCode"></b></div>
         <div class="room-sub" id="roomSub">把房间号发给朋友加入</div>
       </div>
-      <button id="btnShare" class="btn btn-mini">复制邀请</button>
+      <div class="row-mini">
+        <button id="btnVoice" class="btn btn-mini btn-voice hidden">🎧 开语音</button>
+        <button id="btnShare" class="btn btn-mini">复制邀请</button>
+      </div>
     </header>
 
     <div id="seats" class="seats"></div>
@@ -71,12 +74,14 @@
     <main id="gameView" class="game-view"></main>
     <footer class="game-footer">
       <div id="scorebar" class="scorebar"></div>
+      <button id="btnVoiceGame" class="btn btn-mini btn-voice hidden">🎧 开语音</button>
       <button id="btnStop" class="btn btn-mini btn-danger hidden">结束游戏</button>
     </footer>
   </section>
 
   <div id="toast" class="toast hidden"></div>
 </div>
+<script src="/js/voice.js"></script>
 <script src="/js/games.js"></script>
 <script src="/js/app.js"></script>
 </body>

@@ -62,6 +62,7 @@
 
   function handle(msg) {
     if (msg.type === 'error') return toast(msg.error);
+    if (msg.type === 'rtc') return window.PartyVoice.onSignal(msg.from, msg.data);
     if (msg.type === 'joined') {
       meId = msg.playerId; ctx.meId = meId; ctx.meName = meName;
       localStorage.setItem('pg_pid', meId);
@@ -71,9 +72,13 @@
       $('guestWait').classList.toggle('hidden', isHost);
       show('room');
       history.replaceState(null, '', `?room=${msg.code}`);
+      initVoice();
       return;
     }
-    if (msg.type === 'members') return renderSeats(msg.members);
+    if (msg.type === 'members') {
+      window.PartyVoice.sync(msg.members);
+      return renderSeats(msg.members);
+    }
     if (msg.type === 'generating') {
       $('genStatus').classList.remove('hidden');
       $('genResult').classList.add('hidden');
@@ -111,7 +116,8 @@
       const seat = document.createElement('div');
       if (m) {
         seat.className = 'seat' + (m.isHost ? ' host' : '') + (m.online ? '' : ' offline');
-        seat.innerHTML = `<div class="avatar">${escapeHtml(m.name[0] || '?')}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
+        const mic = m.voice ? `<span class="mic${m.mic ? '' : ' muted-mic'}">${m.mic ? '🎙️' : '🔇'}</span>` : '';
+        seat.innerHTML = `<div class="avatar">${escapeHtml(m.name[0] || '?')}${mic}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
       } else {
         seat.className = 'seat empty';
         seat.innerHTML = `<div class="avatar">+</div><div class="seat-name">空位</div>`;
@@ -119,6 +125,61 @@
       wrap.append(seat);
     }
   }
+
+  // ---------- 语音 ----------
+  const V = window.PartyVoice;
+  function sendVoiceState() {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'voice', on: V.enabled, mic: V.micOn }));
+  }
+  function initVoice() {
+    V.init({
+      myId: meId,
+      sendSignal: (to, data) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'rtc', to, data })); },
+      onStateChange: renderVoiceBtns,
+    });
+    renderVoiceBtns();
+  }
+  function renderVoiceBtns() {
+    ['btnVoice', 'btnVoiceGame'].forEach((id) => {
+      const b = $(id);
+      if (!b) return;
+      if (!V.supported) { b.classList.add('hidden'); return; }
+      b.classList.remove('hidden');
+      if (!V.enabled) { b.textContent = '🎧 开语音'; b.classList.remove('on', 'off-mic'); }
+      else if (V.micOn) { b.textContent = '🎙️ 语音中'; b.classList.add('on'); b.classList.remove('off-mic'); }
+      else { b.textContent = '🔇 已闭麦'; b.classList.add('on', 'off-mic'); }
+    });
+  }
+  let voiceHoldFired = false;
+  async function onVoiceBtn() {
+    if (voiceHoldFired) { voiceHoldFired = false; return; } // 长按已处理,吞掉随后的 click
+    if (!V.enabled) {
+      const r = await V.enable();
+      if (r !== true) return toast(r.error);
+      toast('语音已开启,轻点可闭麦/开麦,长按关闭语音');
+    } else {
+      V.toggleMic();
+    }
+    sendVoiceState();
+  }
+  function onVoiceHold(id) { // 长按关闭语音
+    const b = $(id);
+    if (!b) return;
+    let t = null;
+    b.addEventListener('pointerdown', () => {
+      t = setTimeout(() => {
+        t = null; voiceHoldFired = true;
+        if (V.enabled) { V.disable(); sendVoiceState(); toast('语音已关闭'); }
+      }, 700);
+    });
+    ['pointerup', 'pointerleave'].forEach((ev) => b.addEventListener(ev, () => {
+      if (t) { clearTimeout(t); t = null; }
+    }));
+  }
+  $('btnVoice').onclick = onVoiceBtn;
+  $('btnVoiceGame').onclick = onVoiceBtn;
+  onVoiceHold('btnVoice');
+  onVoiceHold('btnVoiceGame');
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
