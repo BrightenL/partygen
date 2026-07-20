@@ -245,7 +245,16 @@
   };
 
   // ---------- 游戏渲染 ----------
+  let lastGameId = null;
   function renderGame(game, you) {
+    // 新一局:重置定序与视图状态(否则上一局的 seq 会把新局的低 seq 状态全部当旧包丢弃)
+    if (game.gameId !== lastGameId) {
+      lastGameId = game.gameId;
+      lastSeq = 0; lastView = null; lastViewSeq = null; lastViewTitle = null; lastClear = 0;
+      lastGame = null;
+      if (ctx.onDestroy) { try { ctx.onDestroy(); } catch {} }
+      ctx.onDestroy = null; ctx.onUpdate = null; ctx.onRt = null;
+    }
     if (game.seq && game.seq <= lastSeq) return;
     lastSeq = game.seq || 0;
 

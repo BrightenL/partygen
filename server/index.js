@@ -59,7 +59,7 @@ function broadcastState(room) {
   g.seq++;
   const s = g.state;
   const pub = {
-    seq: g.seq, templateId: g.templateId, title: g.title,
+    seq: g.seq, gameId: g.gameId, templateId: g.templateId, title: g.title,
     phase: s.phase, round: s.round, ui: s.ui, scores: s.scores,
     players: s.players, toast: s.toast || null,
   };
@@ -77,7 +77,10 @@ function startGame(room) {
     return { error: `「${g.meta.name}」至少需要 ${g.meta.minPlayers} 人(当前在线 ${players.length} 人)` };
   }
   const rng = makeRng(room.seed + Date.now() % 100000);
-  room.game = { templateId, title, state: g.init(spec, players.slice(0, g.meta.maxPlayers), rng), rng, seq: 0 };
+  room.game = {
+    templateId, title, gameId: Math.random().toString(36).slice(2, 10),
+    state: g.init(spec, players.slice(0, g.meta.maxPlayers), rng), rng, seq: 0,
+  };
   if (room.pendingSpec.libraryId) library.markPlayed(room.pendingSpec.libraryId);
   broadcastState(room);
   return {};
@@ -181,7 +184,7 @@ wss.on('connection', (ws) => {
       if (room.game) { // 中途加入:发快照(以观战身份看当前局)
         const g = room.game;
         send(ws, 'game', {
-          game: { seq: g.seq, templateId: g.templateId, title: g.title, phase: g.state.phase, ui: g.state.ui, scores: g.state.scores, players: g.state.players },
+          game: { seq: g.seq, gameId: g.gameId, templateId: g.templateId, title: g.title, phase: g.state.phase, ui: g.state.ui, scores: g.state.scores, players: g.state.players },
           you: g.state.privateUi?.[pid] || null,
         });
       }
