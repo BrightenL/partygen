@@ -177,3 +177,36 @@ canvas.board { width: 100%; background: #fffffe; border-radius: 14px; touch-acti
 
 .final-title { text-align: center; font-size: 28px; font-weight: 800; padding: 18px 0 4px; }
 .confetti { text-align: center; font-size: 44px; }
+
+/* 实时游戏通用控制 */
+.ctrl-row { display: flex; gap: 8px; justify-content: center; padding-top: 4px; }
+.ctrl-btn {
+  flex: 1; max-width: 88px; padding: 16px 0; border: none; border-radius: 14px;
+  background: var(--card2); color: var(--text); font-size: 20px; font-weight: 700;
+  cursor: pointer; user-select: none; touch-action: none;
+}
+.ctrl-btn:active { background: var(--primary); }
+.ctrl-btn.wide { max-width: 130px; font-size: 15px; }
+
+/* 方块对战 */
+.tetris-wrap { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
+.tetris-board { width: min(52vw, 240px); border-radius: 12px; border: 1px solid #322f4d; touch-action: none; }
+.tetris-side { display: flex; flex-direction: column; gap: 8px; }
+.tetris-opp { text-align: center; }
+.tetris-mini { border-radius: 8px; border: 1px solid #322f4d; }
+
+/* 合成大西瓜 */
+.suika-board { width: 100%; max-width: 360px; margin: 0 auto; border-radius: 14px; border: 1px solid #322f4d; touch-action: none; display: block; }
+
+/* 竞技场射击 */
+.arena-board { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 14px; border: 1px solid #322f4d; touch-action: none; display: block; }
+
+/* 格斗对战 */
+.fight-stage { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 14px; border: 1px solid #322f4d; display: block; }
+.fight-hp { display: flex; gap: 14px; }
+.hp-side { flex: 1; }
+.hp-side.right .hp-name { text-align: right; }
+.hp-side.right .hp-bar { transform: scaleX(-1); }
+.hp-name { font-size: 13px; color: var(--muted); margin-bottom: 3px; }
+.hp-bar { height: 12px; background: var(--bg2); border-radius: 6px; overflow: hidden; }
+.hp-fill { height: 100%; background: linear-gradient(90deg, var(--good), #7ee2b8); border-radius: 6px; transition: width .2s; }

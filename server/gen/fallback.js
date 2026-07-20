@@ -73,4 +73,31 @@ export const FALLBACK_SPECS = {
       ],
     },
   },
+  tetris: { title: '方块大乱斗', spec: { title: '方块大乱斗', duration: 120 } },
+  suika: {
+    title: '合成大西瓜',
+    spec: { title: '合成大西瓜', duration: 120, chain: ['🍒', '🍓', '🍇', '🍊', '🍎', '🍐', '🍑', '🍍', '🍈', '🍉'] },
+  },
+  shooter: {
+    title: '萌宠大乱斗',
+    spec: {
+      title: '萌宠大乱斗', duration: 120,
+      theme: { playerEmoji: ['🐱', '🐶', '🦊', '🐸', '🐼', '🐯', '🐰', '🦁'], arenaColor: '#16213e' },
+    },
+  },
+  fight: {
+    title: '巅峰擂台赛',
+    spec: {
+      title: '巅峰擂台赛', rounds: 6, roundSec: 60,
+      theme: {
+        fighters: [
+          { emoji: '🐲', name: '青龙' }, { emoji: '🐯', name: '白虎' },
+          { emoji: '🦅', name: '朱雀' }, { emoji: '🐢', name: '玄武' },
+          { emoji: '🦁', name: '狮王' }, { emoji: '🐺', name: '孤狼' },
+          { emoji: '🐻', name: '铁熊' }, { emoji: '🦍', name: '金刚' },
+        ],
+        moves: { punch: '崩拳', kick: '扫堂腿', block: '铁布衫' },
+      },
+    },
+  },
 };

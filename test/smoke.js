@@ -58,6 +58,26 @@ function randomActions(templateId, state, rng) {
     case 'wheel':
       if (ui.view === 'wheel') for (const p of players) acts.push([p.id, { type: 'approve' }]);
       break;
+    case 'tetris':
+      for (const p of players) {
+        if (rng.next() < 0.3) acts.push([p.id, { type: 'clear', lines: 1 + rng.int(4) }]);
+        if (rng.next() < 0.02) acts.push([p.id, { type: 'dead' }]);
+      }
+      break;
+    case 'suika':
+      for (const p of players) if (rng.next() < 0.5) acts.push([p.id, { type: 'merge', level: 1 + rng.int(9) }]);
+      break;
+    case 'shooter':
+      for (const p of players) if (rng.next() < 0.3) {
+        const others = players.filter((x) => x.id !== p.id);
+        acts.push([p.id, { type: 'kill', target: rng.pick(others).id }]);
+      }
+      break;
+    case 'fight':
+      if (state.duel) for (const pid of state.duel) {
+        if (rng.next() < 0.6) acts.push([pid, { type: 'hit', dmg: 3 + rng.int(12) }]);
+      }
+      break;
   }
   return acts;
 }

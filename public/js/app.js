@@ -5,7 +5,7 @@
   // pg_pid 用 sessionStorage:每个标签页是独立玩家(localStorage 会让同浏览器多标签页互相顶号)
   let ws = null, meId = sessionStorage.getItem('pg_pid') || null, meName = '', isHost = false;
   let roomCode = '', lastSeq = 0;
-  const ctx = { send: sendAction, rerender: () => {}, meId: null, meName: '', strokes: [] };
+  const ctx = { send: sendAction, sendRt, rerender: () => {}, meId: null, meName: '', strokes: [] };
   let lastGame = null, lastYou = null;
 
   function show(name) {
@@ -21,7 +21,7 @@
 
   // ---------- 大厅 ----------
   $('nameInput').value = localStorage.getItem('pg_name') || '';
-  const IDEAS = ['周杰伦歌曲猜歌大赛', '美食主题谁是卧底', '动漫你画我猜', '土味情话数字炸弹', '朋友互吐槽投票', '看emoji猜电影'];
+  const IDEAS = ['周杰伦歌曲猜歌大赛', '美食主题谁是卧底', '来玩俄罗斯方块', '合成大西瓜', 'FPS大乱斗', '拳皇擂台赛', '动漫你画我猜', '朋友互吐槽投票'];
   IDEAS.forEach((t) => {
     const c = document.createElement('span');
     c.className = 'chip'; c.textContent = t;
@@ -59,6 +59,10 @@
 
   function sendAction(action) {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'action', action }));
+  }
+
+  function sendRt(data) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'rt', data }));
   }
 
   function handle(msg) {
@@ -104,7 +108,13 @@
       toast('生成失败:' + msg.error);
       return;
     }
-    if (msg.type === 'gameStopped') { lastGame = null; show('room'); return; }
+    if (msg.type === 'gameStopped') {
+      lastGame = null; lastView = null;
+      if (ctx.onDestroy) { try { ctx.onDestroy(); } catch {} }
+      ctx.onDestroy = null; ctx.onUpdate = null; ctx.onRt = null;
+      show('room'); return;
+    }
+    if (msg.type === 'rt') { if (ctx.onRt) ctx.onRt(msg.from, msg.data); return; }
     if (msg.type === 'game') return renderGame(msg.game, msg.you);
   }
 
@@ -244,6 +254,7 @@
     const isSameDrawView = lastGame && ui.view === 'draw' && lastGame.ui?.view === 'draw'
       && lastGame.ui.drawerId === ui.drawerId && lastGame.ui.timer !== undefined;
     lastGame = game; lastYou = you;
+    window.__pgPlayers = game.players || [];
     show('game');
     $('gameTitle').textContent = game.title || '';
     $('btnStop').classList.toggle('hidden', !isHost);
@@ -279,17 +290,33 @@
       return;
     }
 
+    // 实时类视图(自带渲染循环):同视图的后续状态走 onUpdate 增量更新,不重建 DOM
+    if (lastView === ui.view && ctx.onUpdate) { ctx.lastUi = ui; ctx.onUpdate(ui, you); return; }
+
     // 全量渲染
     const view = ui.view;
     const root = $('gameView');
+    // 销毁上一个实时视图的渲染循环/处理器
+    if (ctx.onDestroy) { try { ctx.onDestroy(); } catch {} }
+    ctx.onDestroy = null; ctx.onUpdate = null; ctx.onRt = null;
     root.innerHTML = '';
     // 视图切换时重置一次性状态
     if (!lastView || lastView !== view || ui.seq !== lastViewSeq || ui.title !== lastViewTitle) {
       ctx.myChoice = null; ctx.myVote = null;
     }
     lastView = view; lastViewSeq = ui.seq; lastViewTitle = ui.title;
+    ctx.you = you;
     ctx.strokes = view === 'draw' ? collectStrokes(ui) : [];
-    ctx.rerender = () => { const r = window.GameRenderers[view]; if (r) { root.innerHTML = ''; r(ui, ctx, root); } };
+    ctx.lastUi = ui;
+    ctx.rerender = () => {
+      const v = (ctx.lastUi || ui).view;
+      const r = window.GameRenderers[v];
+      if (!r) return;
+      if (ctx.onDestroy) { try { ctx.onDestroy(); } catch {} }
+      ctx.onDestroy = null; ctx.onUpdate = null; ctx.onRt = null;
+      root.innerHTML = '';
+      r(ctx.lastUi || ui, ctx, root);
+    };
     const renderer = window.GameRenderers[view];
     if (renderer) renderer(ui, ctx, root);
     else root.innerHTML = `<p class="g-sub">加载中…</p>`;

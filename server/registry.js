@@ -7,8 +7,12 @@ import * as react from './games/react.js';
 import * as chain from './games/chain.js';
 import * as emoji from './games/emoji.js';
 import * as wheel from './games/wheel.js';
+import * as tetris from './games/tetris.js';
+import * as suika from './games/suika.js';
+import * as shooter from './games/shooter.js';
+import * as fight from './games/fight.js';
 
-export const GAMES = { quiz, undercover, draw, bomb, vote, react, chain, emoji, wheel };
+export const GAMES = { quiz, undercover, draw, bomb, vote, react, chain, emoji, wheel, tetris, suika, shooter, fight };
 
 // 生成管线用的模板说明书:LLM 只需产出 templateId + spec
 export const TEMPLATE_DOCS = `
@@ -41,4 +45,17 @@ export const TEMPLATE_DOCS = `
 
 9. wheel 真心话转盘 — 适合:真心话、才艺展示、语音互动惩罚
    spec: { "rounds": 6, "questions": ["问题1", ...] }  // 语音回答的开放问题
+
+10. tetris 方块对战(俄罗斯方块) — 适合:俄罗斯方块、消除类竞技
+   spec: { "title": "标题", "duration": 120 }  // 秒,60-300;消2+行给对手发垃圾行
+
+11. suika 合成大西瓜 — 适合:合成/消除休闲赛,可换主题合成链
+   spec: { "title": "标题", "duration": 120, "chain": ["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"] }
+   // chain: 6-11 个 emoji 从小到大的合成链,可按用户主题定制(如全是动物/甜品)
+
+12. shooter 竞技场射击 — 适合:射击、FPS、吃鸡类想法(顶视角竞技场实现)
+   spec: { "title": "标题", "duration": 120, "theme": { "playerEmoji": ["🐱","🐶","🦊","🐸","🐼","🐯","🐰","🦁"], "arenaColor": "#1a2436" } }
+
+13. fight 格斗对战(拳皇式1v1擂台) — 适合:格斗、拳皇、街霸类想法;两人对打其余观战,胜者守擂
+   spec: { "title": "标题", "rounds": 6, "roundSec": 60, "theme": { "fighters": [{ "emoji": "🐲", "name": "青龙" }, ...8个], "moves": { "punch": "拳招式名", "kick": "腿招式名", "block": "防御名" } } }
 `;

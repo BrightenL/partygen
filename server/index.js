@@ -205,6 +205,24 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // 实时通道:高频事件(位置/笔画/垃圾行)不走全量状态广播,由模板 onRt 决定中继方式
+    // onRt 返回 { data } 广播给其他人,{ to, data } 定向发送,null 丢弃
+    if (msg.type === 'rt') {
+      const g = room.game;
+      if (!g || g.state.phase === 'ended') return;
+      const tpl = GAMES[g.templateId];
+      if (!tpl.onRt) return;
+      const out = tpl.onRt(g.state, me.id, msg.data || {}, g.rng);
+      if (!out) return;
+      if (out.to) {
+        const t = room.members.get(out.to);
+        if (t) send(t.ws, 'rt', { from: me.id, data: out.data });
+      } else {
+        for (const m of room.members.values()) if (m.id !== me.id) send(m.ws, 'rt', { from: me.id, data: out.data });
+      }
+      return;
+    }
+
     // 语音状态(是否开启语音、是否闭麦)→ 广播成员列表
     if (msg.type === 'voice') {
       me.voice = !!msg.on;

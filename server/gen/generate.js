@@ -34,6 +34,10 @@ export function validateSpec(templateId, spec) {
     chain: () => !!spec.category || !!spec.title,
     emoji: () => Array.isArray(spec.items) && spec.items.length >= 3 && spec.items.every((i) => i.emoji && i.answer),
     wheel: () => Array.isArray(spec.questions) && spec.questions.length >= 3,
+    tetris: () => true,
+    suika: () => spec.chain == null || (Array.isArray(spec.chain) && spec.chain.length >= 6),
+    shooter: () => true,
+    fight: () => true,
   }[templateId];
   return need && need() ? null : `spec 不满足 ${templateId} 模板要求`;
 }
@@ -62,6 +66,10 @@ async function callClaude(messages) {
 function fallbackGenerate(idea) {
   const rules = [
     [/卧底|伪装|间谍|spy/i, 'undercover'],
+    [/俄罗斯方块|方块|tetris|消行/i, 'tetris'],
+    [/大西瓜|合成|suika|水果合成/i, 'suika'],
+    [/射击|fps|吃鸡|枪战|大乱斗/i, 'shooter'],
+    [/拳皇|格斗|街霸|对打|擂台/i, 'fight'],
     [/画|draw/i, 'draw'],
     [/炸弹|数字|惩罚|喝酒/i, 'bomb'],
     [/谁最|投票|评选/i, 'vote'],
