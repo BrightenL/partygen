@@ -70,6 +70,7 @@
     ]));
 
     const g2d = canvas.getContext('2d');
+    const fx = window.FX?.pool(g2d);
     const rng = mulberry32(ui.seed ^ 0x7e77);
     let board = Array.from({ length: H }, () => Array(W).fill(0));
     let bag = [], cur = null, nx = null, alive = true, soft = false;
@@ -113,9 +114,15 @@
       for (let r = 0; r < cur.m.length; r++) for (let c = 0; c < cur.m[r].length; c++)
         if (cur.m[r][c] && cur.y + r >= 0) board[cur.y + r][cur.x + c] = cur.t + 1;
       let cleared = 0;
-      board = board.filter((row) => { if (row.every((v) => v)) { cleared++; return false; } return true; });
+      const clearedYs = [];
+      board = board.filter((row, r) => { if (row.every((v) => v)) { cleared++; clearedYs.push(r); return false; } return true; });
       while (board.length < H) board.unshift(Array(W).fill(0));
-      if (cleared) { window.sfx?.clearLine(cleared); ctx.send({ type: 'clear', lines: cleared }); }
+      if (cleared) {
+        window.sfx?.clearLine(cleared);
+        for (const r of clearedYs) fx?.burst(150, r * 30 + 15, { n: 10 + cleared * 4, speed: 4, size: 4, colors: TCOLORS });
+        if (cleared >= 4) window.FX?.shake(canvas, 1.4);
+        ctx.send({ type: 'clear', lines: cleared });
+      }
       else window.sfx?.land();
       spawn();
     }
@@ -221,6 +228,7 @@
         g2d.fillText('☠️ 已淘汰', 150, 290);
         g2d.font = '14px sans-serif'; g2d.fillStyle = 'rgba(255,255,255,.6)'; g2d.fillText('围观队友中…', 150, 320);
       }
+      fx?.step();
     });
   };
 
@@ -238,9 +246,11 @@
     root.append(chainBar);
 
     const g2d = canvas.getContext('2d');
+    const fx = window.FX?.pool(g2d);
     const rng = mulberry32(ui.seed ^ 0x5417);
     const chain = ui.chain;
     const radius = (lv) => 12 + lv * 7;
+    const SUIKA_COLORS = ['#ffd166', '#ff8906', '#ef4565', '#a78bfa', '#22d3ee', '#2cb67d'];
     let balls = [], dropX = CW / 2, nextLv = Math.floor(rng() * 3), cooldown = 0, overflowT = 0;
 
     const px = (e) => {
@@ -283,6 +293,7 @@
             const lv = a.lv + 1;
             balls.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, vx: 0, vy: -2, lv });
             window.sfx?.merge(lv);
+            fx?.burst((a.x + b.x) / 2, (a.y + b.y) / 2, { n: 8 + lv * 2, speed: 2.5 + lv * 0.3, size: 3, colors: [SUIKA_COLORS[lv % SUIKA_COLORS.length], '#fff'] });
             ctx.send({ type: 'merge', level: lv });
             continue;
           }
@@ -302,7 +313,7 @@
       const wasOver = overflowT > 0;
       overflowT = overLine ? overflowT + 1 : 0;
       if (overflowT > 0 && !wasOver) window.sfx?.danger();
-      if (overflowT > 120) { balls = []; overflowT = 0; window.sfx?.explode(); }
+      if (overflowT > 120) { balls = []; overflowT = 0; window.sfx?.explode(); window.FX?.shake(canvas, 1.5); }
     }
 
     loop(ctx, () => {
@@ -321,6 +332,7 @@
       g2d.font = `${radius(nextLv) * 1.7}px sans-serif`;
       g2d.fillText(chain[nextLv], dropX, 28);
       g2d.globalAlpha = 1;
+      fx?.step();
     });
     ctx.onUpdate = () => {};
   };
@@ -336,6 +348,7 @@
     root.append(feedEl);
 
     const g2d = canvas.getContext('2d');
+    const fx = window.FX?.pool(g2d);
     const emojis = ui.theme?.playerEmoji || ['🐱', '🐶', '🦊', '🐸', '🐼', '🐯', '🐰', '🦁'];
     const arenaColor = ui.theme?.arenaColor || '#16213e';
     const myIdx = Math.abs([...ctx.meId].reduce((a, c) => a + c.charCodeAt(0), 0));
@@ -416,11 +429,22 @@
             if (Math.hypot(b.x - o.x, b.y - o.y) < 16) {
               b.gone = true;
               const n = (damage.get(id) || 0) + 1;
-              if (n >= 3) { damage.set(id, 0); window.sfx?.explode(); ctx.send({ type: 'kill', target: id }); }
-              else { damage.set(id, n); window.sfx?.hit(); }
+              if (n >= 3) {
+                damage.set(id, 0);
+                window.sfx?.explode();
+                fx?.burst(o.x, o.y, { n: 24, speed: 4.5, size: 4 });
+                window.FX?.shake(canvas, 1.5);
+                ctx.send({ type: 'kill', target: id });
+              }
+              else { damage.set(id, n); window.sfx?.hit(); fx?.burst(b.x, b.y, { n: 6, speed: 2.5, size: 2.5, colors: ['#ffe066', '#fff'] }); }
             }
           }
-        } else if (Math.hypot(b.x - me.x, b.y - me.y) < 16) { b.gone = true; me.hp = Math.max(0, me.hp - 1); window.sfx?.hit(); }
+        } else if (Math.hypot(b.x - me.x, b.y - me.y) < 16) {
+          b.gone = true; me.hp = Math.max(0, me.hp - 1);
+          window.sfx?.hit();
+          fx?.burst(me.x, me.y, { n: 8, speed: 3, size: 3, colors: ['#ef4565', '#fff'] });
+          window.FX?.shake(canvas, 0.8);
+        }
       }
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
@@ -475,6 +499,7 @@
         g2d.fillStyle = 'rgba(255,255,255,.4)';
         g2d.beginPath(); g2d.arc(joy.x, joy.y, 12, 0, 7); g2d.fill();
       }
+      fx?.step();
     });
   };
 
@@ -495,6 +520,8 @@
     root.append(queueEl);
 
     const g2d = canvas.getContext('2d');
+    const fx = window.FX?.pool(g2d);
+    let freezeT = 0; // hit-stop:命中瞬间冻结几帧增强打击感
     let A = ui.a, B = ui.b;
     const iAmA = ctx.meId === A.id, iAmB = ctx.meId === B.id, fighting = iAmA || iAmB;
     const myEmoji = (i) => fighters[i % Math.max(1, fighters.length)]?.emoji || ['🥷', '🥋'][i % 2];
@@ -532,7 +559,12 @@
       const opp = actors[oppId];
       if (opp && Math.abs(meActor.x - opp.x) < 14) {
         const real = opp.pose === 'block' ? 2 : dmg;
-        if (opp.pose === 'block') window.sfx?.tap(); else window.sfx?.hit();
+        if (opp.pose === 'block') window.sfx?.tap();
+        else {
+          window.sfx?.hit();
+          freezeT = 4;
+          fx?.burst(opp.x / 100 * CW, CH - 60, { n: 12, speed: 3.5, size: 3, colors: ['#ff8906', '#ffd166', '#fff'] });
+        }
         ctx.send({ type: 'hit', dmg: real });
       }
     }
@@ -554,7 +586,12 @@
       const prevMyHp = iAmA ? A.hp : iAmB ? B.hp : null;
       A = u.a; B = u.b;
       const myHp = iAmA ? A.hp : iAmB ? B.hp : null;
-      if (prevMyHp != null && myHp != null && myHp < prevMyHp) window.sfx?.hit();
+      if (prevMyHp != null && myHp != null && myHp < prevMyHp) {
+        window.sfx?.hit();
+        window.FX?.flash(canvas);
+        window.FX?.shake(canvas, 0.8);
+        fx?.burst(meActor.x / 100 * CW, CH - 60, { n: 10, speed: 3, size: 3, colors: ['#ef4565', '#fff'] });
+      }
       renderHp();
       queueEl.textContent = u.queue?.length ? `等待挑战:${u.queue.join('、')}` : '';
       // 新一场:重置演员
@@ -574,6 +611,7 @@
 
     loop(ctx, () => {
       const now = performance.now();
+      if (freezeT > 0) { freezeT--; return; } // hit-stop:冻结画面几帧
       if (fighting && moveDir) {
         meActor.x = Math.max(6, Math.min(94, meActor.x + moveDir * 0.9));
         meActor.facing = moveDir;
@@ -621,6 +659,7 @@
         if (a.pose === 'kick')  { g2d.fillText('🦶', x + a.facing * 38, y + 8); }
         if (a.pose === 'block') { g2d.fillText('🛡️', x + a.facing * 26, y); }
       });
+      fx?.step();
     });
   };
 })();
