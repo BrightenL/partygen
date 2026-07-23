@@ -38,6 +38,12 @@
     return g;
   }
 
+  // 逻辑坐标 → 页面坐标,给 DOM 飘字用
+  function toPage(canvas, cssW, cssH, x, y) {
+    const r = canvas.getBoundingClientRect();
+    return [r.left + x / cssW * r.width, r.top + y / cssH * r.height];
+  }
+
   function btnRow(defs) {
     const row = h('div', 'ctrl-row');
     for (const [label, opts] of defs) {
@@ -138,6 +144,8 @@
         window.sfx?.clearLine(cleared);
         for (const r of clearedYs) fx?.burst(150, r * 30 + 15, { n: 10 + cleared * 4, speed: 4, size: 4, colors: TCOLORS });
         if (cleared >= 4) window.FX?.shake(canvas, 1.4);
+        const [px2, py2] = toPage(canvas, 300, 600, 150, clearedYs[0] * 30);
+        window.FX?.floatScore(px2, py2, cleared >= 4 ? '🔥 Tetris!' : `+${cleared} 行`);
         ctx.send({ type: 'clear', lines: cleared });
       }
       else window.sfx?.land();
@@ -322,6 +330,10 @@
             balls.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, vx: 0, vy: -2, lv });
             window.sfx?.merge(lv);
             fx?.burst((a.x + b.x) / 2, (a.y + b.y) / 2, { n: 8 + lv * 2, speed: 2.5 + lv * 0.3, size: 3, colors: [SUIKA_COLORS[lv % SUIKA_COLORS.length], '#fff'] });
+            if (lv >= 3) {
+              const [px2, py2] = toPage(canvas, CW, CH, (a.x + b.x) / 2, (a.y + b.y) / 2);
+              window.FX?.floatScore(px2, py2, `${chain[lv]} +${lv}`);
+            }
             ctx.send({ type: 'merge', level: lv });
             continue;
           }
@@ -461,6 +473,8 @@
                 window.sfx?.explode();
                 fx?.burst(o.x, o.y, { n: 24, speed: 4.5, size: 4 });
                 window.FX?.shake(canvas, 1.5);
+                const [px2, py2] = toPage(canvas, CW, CH, o.x, o.y);
+                window.FX?.floatScore(px2, py2, '💥 击杀!');
                 ctx.send({ type: 'kill', target: id });
               }
               else { damage.set(id, n); window.sfx?.hit(); fx?.burst(b.x, b.y, { n: 6, speed: 2.5, size: 2.5, colors: ['#ffe066', '#fff'] }); }
