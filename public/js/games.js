@@ -264,7 +264,7 @@
     const urgency = Math.max(0.3, 1 - (ui.high - ui.low) / 100);
     const bombEl = document.createElement('div');
     bombEl.className = 'bomb-emoji';
-    bombEl.style.setProperty('--bomb-speed', `${Math.max(0.25, 1 - urgency * 0.7}s`);
+    bombEl.style.setProperty('--bomb-speed', `${Math.max(0.25, 1 - urgency * 0.7)}s`);
     bombEl.textContent = '💣';
     root.append(bombEl);
     const range = h('div', 'bomb-range');
