@@ -68,6 +68,13 @@
     const wrap = h('div', 'tetris-wrap');
     const canvas = h('canvas', 'tetris-board');
     const side = h('div', 'tetris-side');
+    // next 方块预览
+    const nextBox = h('div', 'tetris-opp');
+    const nextCv = h('canvas', 'tetris-mini');
+    nextCv.width = 60; nextCv.height = 44;
+    nextBox.append(nextCv, h('div', 'seat-name', 'next'));
+    const oppBox = h('div', 'tetris-side');
+    side.append(nextBox, oppBox);
     wrap.append(canvas, side);
     root.append(wrap);
     root.append(btnRow([
@@ -93,6 +100,7 @@
     function spawn() {
       const t = nx ?? draw7bag();
       nx = draw7bag();
+      if (typeof drawNext === 'function') drawNext();
       cur = { t, m: SHAPES[t].map((r) => r.slice()), x: 3, y: 0 };
       if (collide(cur.m, cur.x, cur.y)) {
         alive = false;
@@ -155,7 +163,19 @@
       return bits;
     }
 
+    function drawNext() {
+      const n2 = nextCv.getContext('2d');
+      n2.fillStyle = '#0f0e17'; n2.fillRect(0, 0, 60, 44);
+      if (nx == null) return;
+      const m = SHAPES[nx];
+      const cw = 12, ox = (60 - m[0].length * cw) / 2, oy = (44 - m.length * cw) / 2;
+      n2.fillStyle = TCOLORS[nx];
+      for (let r = 0; r < m.length; r++) for (let c = 0; c < m[r].length; c++)
+        if (m[r][c]) n2.fillRect(ox + c * cw + 1, oy + r * cw + 1, cw - 2, cw - 2);
+    }
+
     spawn();
+    drawNext();
     ctx.onUpdate = (u, you) => {
       const total = you?.garbage ?? 0;
       if (total > garbageApplied) { applyGarbage(total - garbageApplied); garbageApplied = total; }
@@ -164,7 +184,7 @@
     ctx.onRt = (from, data) => { if (data.board) opponents.set(from, { board: data.board, at: Date.now() }); };
 
     function renderSide(u) {
-      side.innerHTML = '';
+      oppBox.innerHTML = '';
       for (const [from, o] of opponents) {
         const p = (u || ui).alive || {};
         const name = (lastPlayers().find((x) => x.id === from) || {}).name || '对手';
@@ -179,7 +199,7 @@
         }
         const cell = h('div', 'tetris-opp');
         cell.append(mini, h('div', 'seat-name', name + (p[from] === false ? ' ☠️' : '')));
-        side.append(cell);
+        oppBox.append(cell);
       }
     }
     function lastPlayers() { return (window.__pgPlayers || []); }
