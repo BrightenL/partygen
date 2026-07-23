@@ -466,24 +466,6 @@
         g2d.beginPath(); g2d.arc(joy.ox, joy.oy, 28, 0, 7); g2d.stroke();
         g2d.fillStyle = 'rgba(255,255,255,.4)';
         g2d.beginPath(); g2d.arc(joy.x, joy.y, 12, 0, 7); g2d.fill();
-      }thers) {
-        g2d.font = '26px sans-serif';
-        g2d.fillText(emojis[ei++ % emojis.length], o.x, o.y);
-      }
-      if (respawnFlash > 0) { respawnFlash--; g2d.globalAlpha = respawnFlash % 10 < 5 ? 0.35 : 1; }
-      g2d.font = '28px sans-serif';
-      g2d.fillText(emojis[0], me.x, me.y);
-      g2d.globalAlpha = 1;
-      // 我的血条
-      g2d.fillStyle = '#ef4565'; g2d.fillRect(me.x - 14, me.y - 22, 28, 4);
-      g2d.fillStyle = '#2cb67d'; g2d.fillRect(me.x - 14, me.y - 22, 28 * (me.hp / 3), 4);
-      // 子弹
-      g2d.fillStyle = '#ffd166';
-      for (const b of bullets) { g2d.beginPath(); g2d.arc(b.x, b.y, 3, 0, 7); g2d.fill(); }
-      if (joy) {
-        g2d.strokeStyle = 'rgba(255,255,255,.35)';
-        g2d.beginPath(); g2d.arc(joy.ox, joy.oy, 24, 0, 7); g2d.stroke();
-        g2d.beginPath(); g2d.arc(joy.x, joy.y, 10, 0, 7); g2d.stroke();
       }
     });
   };
