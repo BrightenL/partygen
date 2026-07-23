@@ -373,11 +373,44 @@
   };
 
   // ---- 结算 ----
+  let finalRevealKey = null; // 防同一结算画面重复播放揭晓动画
   R.final = (ui, ctx, root) => {
-    window.sfx?.win();
-    root.append(h('div', 'confetti', '🎉'), h('div', 'final-title', ui.title));
+    root.append(h('div', 'final-title', ui.title));
     if (ui.subtitle) root.append(h('p', 'g-sub center', ui.subtitle));
-    if (ui.scores) root.append(rankList(ui.scores));
+    if (!ui.scores || !ui.scores.length) { window.sfx?.win(); root.append(h('div', 'confetti', '🎉')); return; }
+
+    const key = ui.title + '|' + ui.scores.map((s) => `${s.name}:${s.score}`).join(',');
+    const replay = finalRevealKey === key;
+    finalRevealKey = key;
+
+    const wrap = h('div', 'rank');
+    const max = Math.max(1, ...ui.scores.map((s) => s.score));
+    const n = ui.scores.length;
+    ui.scores.forEach((s, i) => {
+      const item = h('div', 'rank-item' + (i === 0 ? ' rank-gold' : ''));
+      item.append(h('div', 'pos', i === 0 ? '👑' : `${i + 1}`), h('div', 'nm', s.name));
+      const bw = h('div', 'bar-wrap');
+      const bar = h('div', 'bar');
+      bar.style.width = `${Math.max(4, (s.score / max) * 100)}%`;
+      bw.append(bar);
+      item.append(bw, h('div', 'pts', `${s.score}`));
+      if (!replay) {
+        // 从末名到首名逐条揭晓
+        item.classList.add('rank-reveal');
+        item.style.animationDelay = `${(n - 1 - i) * 0.4}s`;
+      }
+      wrap.append(item);
+    });
+    root.append(wrap);
+
+    if (!replay) {
+      window.FX?.confetti(root, { n: 40 });
+      // 首名揭晓时刻:胜利音 + 二波彩带
+      setTimeout(() => {
+        window.sfx?.win();
+        window.FX?.confetti(root, { n: 60 });
+      }, (n - 1) * 400 + 200);
+    }
   };
 
   window.GameRenderers = R;
