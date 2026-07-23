@@ -378,3 +378,24 @@ body::before {
 /* ── 计分条滚动 ── */
 .scorebar { scrollbar-width: none; }
 .scorebar::-webkit-scrollbar { display: none; }
+
+/* ── FX 特效(fx.js) ── */
+@keyframes fx-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(calc(-5px * var(--shake-s, 1)), calc(3px * var(--shake-s, 1))); }
+  40% { transform: translate(calc(4px * var(--shake-s, 1)), calc(-4px * var(--shake-s, 1))); }
+  60% { transform: translate(calc(-3px * var(--shake-s, 1)), calc(2px * var(--shake-s, 1))); }
+  80% { transform: translate(calc(2px * var(--shake-s, 1)), calc(-2px * var(--shake-s, 1))); }
+}
+.fx-shake { animation: fx-shake .3s ease; }
+@keyframes fx-flash { 0% { filter: brightness(2.2) saturate(.3); } 100% { filter: none; } }
+.fx-flash { animation: fx-flash .25s ease-out; }
+.fx-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 150; }
+.fx-confetti-piece {
+  position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px;
+  animation: fx-confetti-fall 2.6s cubic-bezier(.2, .4, .6, 1) forwards;
+}
+@keyframes fx-confetti-fall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--cx, 0px), 105vh) rotate(var(--cr, 540deg)); opacity: .8; }
+}
