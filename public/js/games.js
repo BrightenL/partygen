@@ -66,7 +66,10 @@
       });
       root.append(opts);
       if (ctx.myChoice != null) {
-        ctx.myChoice === ui.answer ? window.sfx?.correct() : window.sfx?.wrong();
+        if (ctx.myChoice === ui.answer) {
+          window.sfx?.correct();
+          window.FX?.floatScore(window.innerWidth / 2, window.innerHeight * 0.35, '✓ 答对啦');
+        } else window.sfx?.wrong();
       }
     }
     if (ui.explain) root.append(h('p', 'g-sub', ui.explain));
@@ -337,12 +340,38 @@
   };
 
   // ---- 真心话转盘 ----
+  let wheelSpunKey = null; // 同一转的后续状态包(倒计时/票数)会全量重建,防止旋转重播
+  const WHEEL_COLORS = ['#7f5af0', '#ff8906', '#2cb67d', '#ef4565', '#22d3ee', '#eab308', '#a78bfa', '#f97316'];
   R.wheel = (ui, ctx, root) => {
     root.append(h('div', 'g-title', ui.title));
-    const wheel = h('div', '');
-    wheel.style.cssText = 'text-align:center;font-size:56px;padding:8px 0;animation:logo-float 2s ease-in-out infinite;filter:drop-shadow(0 4px 20px rgba(127,90,240,.5));';
-    wheel.textContent = '🎡';
-    root.append(wheel);
+
+    const players = (window.__pgPlayers || []);
+    const key = ui.title + '|' + ui.chosenId;
+    const spun = wheelSpunKey === key;
+    wheelSpunKey = key;
+
+    // ---- 分段转盘 ----
+    const n = Math.max(1, players.length);
+    const seg = 360 / n;
+    const chosenIdx = Math.max(0, players.findIndex((p) => p.id === ui.chosenId));
+    // 指针在顶部(0°),让选中扇区中心停在指针下
+    const target = 360 * 4 + (360 - (chosenIdx * seg + seg / 2));
+
+    const box = h('div', 'wheel-box');
+    const disc = h('div', 'wheel-disc');
+    const stops = players.map((p, i) =>
+      `${WHEEL_COLORS[i % WHEEL_COLORS.length]} ${i * seg}deg ${(i + 1) * seg}deg`).join(',');
+    disc.style.background = `conic-gradient(${stops})`;
+    players.forEach((p, i) => {
+      const lb = h('span', 'wheel-label', (p.name || '?')[0]);
+      lb.style.transform = `rotate(${i * seg + seg / 2}deg) translateY(-58px)`;
+      disc.append(lb);
+    });
+    box.append(disc, h('div', 'wheel-pointer', '▼'));
+    root.append(box);
+
+    // ---- 揭晓区(旋转结束前隐藏) ----
+    const revealBox = h('div', 'wheel-reveal');
     const banner = h('div', 'turn-banner');
     const isChosen = ui.chosenId === ctx.meId;
     banner.append(
@@ -350,26 +379,54 @@
       h('div', 'who', isChosen ? '你' : ui.chosen)
     );
     if (isChosen) banner.style.cssText = 'background:rgba(239,69,101,.1);border-radius:14px;padding:12px;';
-    root.append(banner);
+    revealBox.append(banner);
     const q = h('div', 'g-question', ui.question);
     q.style.margin = '12px 0 6px';
-    root.append(q);
-    if (ui.subtitle) root.append(h('p', 'g-sub', ui.subtitle));
+    revealBox.append(q);
+    if (ui.subtitle) revealBox.append(h('p', 'g-sub', ui.subtitle));
     const prog = h('div', 'g-sub');
     prog.style.cssText = 'text-align:center;margin-top:10px;font-size:15px;';
     prog.textContent = `👍 ${ui.approves} / ${ui.need} 人通过`;
-    root.append(prog);
+    revealBox.append(prog);
     if (!isChosen) {
       const b = h('button', 'btn btn-primary', `通过 TA`);
       b.style.marginTop = '12px';
       b.onclick = () => { b.disabled = true; b.textContent = '已通过 ✓'; ctx.send({ type: 'approve' }); };
-      root.append(b);
+      revealBox.append(b);
     } else {
       const tip = h('p', 'g-sub');
       tip.style.cssText = 'text-align:center;margin-top:8px;color:var(--muted);';
       tip.textContent = '等其他人投票放你过关…';
-      root.append(tip);
+      revealBox.append(tip);
     }
+    root.append(revealBox);
+
+    if (spun) {
+      // 已播过:静态停在终角,直接显示揭晓区
+      disc.style.transform = `rotate(${target}deg)`;
+      return;
+    }
+    // 首次:旋转表演,结束后揭晓
+    revealBox.classList.add('hidden');
+    window.sfx?.pop();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      disc.style.transition = 'transform 2.4s cubic-bezier(.2, .9, .3, 1)';
+      disc.style.transform = `rotate(${target}deg)`;
+    }));
+    const revealNow = () => {
+      if (!revealBox.classList.contains('hidden')) return;
+      revealBox.classList.remove('hidden');
+      revealBox.classList.add('wheel-reveal-in');
+      window.sfx?.correct();
+    };
+    disc.addEventListener('transitionend', revealNow, { once: true });
+    setTimeout(revealNow, 2700); // 兜底
+
+    // 倒计时每秒 tick 会全量重建并打断旋转:注册 onUpdate 增量更新,仅换人时才重建
+    ctx.onUpdate = (u) => {
+      if (u.chosenId !== ui.chosenId || u.title !== ui.title) { ctx.rerender(); return; }
+      prog.textContent = `👍 ${u.approves} / ${u.need} 人通过`;
+    };
   };
 
   // ---- 结算 ----

@@ -411,3 +411,25 @@ body::before {
   box-shadow: 0 0 18px rgba(255, 215, 0, .18), inset 0 0 12px rgba(255, 215, 0, .06);
 }
 .rank-gold .nm { font-weight: 800; color: gold; }
+
+/* ── 真心话大转盘 ── */
+.wheel-box { position: relative; width: 160px; height: 172px; margin: 4px auto; }
+.wheel-disc {
+  position: absolute; left: 0; top: 12px; width: 160px; height: 160px;
+  border-radius: 50%; border: 4px solid rgba(255,255,255,.15);
+  box-shadow: 0 6px 24px rgba(0,0,0,.4), inset 0 0 20px rgba(0,0,0,.25);
+  will-change: transform;
+}
+.wheel-label {
+  position: absolute; left: 50%; top: 50%; margin: -10px 0 0 -10px;
+  width: 20px; height: 20px; line-height: 20px; text-align: center;
+  font-size: 13px; font-weight: 800; color: rgba(255,255,255,.92);
+  text-shadow: 0 1px 3px rgba(0,0,0,.6); pointer-events: none;
+}
+.wheel-pointer {
+  position: absolute; left: 50%; top: -4px; transform: translateX(-50%);
+  font-size: 20px; color: #ffd166; z-index: 2;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.5));
+}
+@keyframes wheel-reveal-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.wheel-reveal-in { animation: wheel-reveal-in .35s ease both; }
