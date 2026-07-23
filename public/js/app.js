@@ -63,12 +63,24 @@
   };
 
   // ---------- WebSocket ----------
+  let reconnBanner = null;
+  function showReconnect(on) {
+    if (on && !reconnBanner) {
+      reconnBanner = document.createElement('div');
+      reconnBanner.className = 'reconn-banner';
+      reconnBanner.innerHTML = '<span class="spinner spinner-sm"></span> 连接断开，重连中…';
+      document.body.append(reconnBanner);
+    } else if (!on && reconnBanner) {
+      reconnBanner.remove(); reconnBanner = null;
+      toast('已重新连接'); window.sfx?.pop();
+    }
+  }
   function connect() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws`);
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code: roomCode, name: meName, playerId: meId }));
+    ws.onopen = () => { showReconnect(false); ws.send(JSON.stringify({ type: 'join', code: roomCode, name: meName, playerId: meId })); };
     ws.onmessage = (e) => handle(JSON.parse(e.data));
-    ws.onclose = () => setTimeout(() => { if (roomCode) connect(); }, 1500);
+    ws.onclose = () => { if (roomCode) { showReconnect(true); setTimeout(connect, 1500); } };
   }
 
   function sendAction(action) {
