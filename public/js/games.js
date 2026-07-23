@@ -60,11 +60,14 @@
     if (ui.options) {
       const opts = h('div', 'options');
       ui.options.forEach((o, i) => {
-        const b = h('button', 'opt' + (i === ui.answer ? ' correct' : ''), o);
+        const b = h('button', 'opt' + (i === ui.answer ? ' correct' : ' wrong'), o);
         b.disabled = true;
         opts.append(b);
       });
       root.append(opts);
+      if (ctx.myChoice != null) {
+        ctx.myChoice === ui.answer ? window.sfx?.correct() : window.sfx?.wrong();
+      }
     }
     if (ui.explain) root.append(h('p', 'g-sub', ui.explain));
     if (ui.scores) root.append(rankList(ui.scores));
@@ -122,6 +125,7 @@
   };
 
   R.voteReveal = (ui, ctx, root) => {
+    window.sfx?.win();
     root.append(h('div', 'g-question', ui.subtitle), h('div', 'confetti', '🏆'),
       h('div', 'final-title', ui.winner));
     const wrap = h('div', 'rank');
@@ -197,6 +201,7 @@
   };
 
   R.roundEnd = (ui, ctx, root) => {
+    window.sfx?.win();
     root.append(h('div', 'final-title', ui.title), rankList(ui.scores));
   };
 

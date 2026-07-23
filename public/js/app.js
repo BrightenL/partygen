@@ -16,6 +16,7 @@
   function toast(msg, ms = 2600) {
     const t = $('toast');
     t.textContent = msg; t.classList.remove('hidden');
+    window.sfx?.pop();
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.add('hidden'), ms);
   }
 
@@ -41,6 +42,19 @@
     roomCode = code;
     connect();
   }
+
+  document.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('.btn, .opt, .ctrl-btn, .lib-item, .chip');
+    if (!btn) return;
+    window.sfx?.tap();
+    const dot = document.createElement('span');
+    dot.className = 'ripple-dot';
+    const r = btn.getBoundingClientRect();
+    dot.style.left = (e.clientX - r.left) + 'px';
+    dot.style.top  = (e.clientY - r.top)  + 'px';
+    btn.appendChild(dot);
+    dot.addEventListener('animationend', () => dot.remove());
+  }, { passive: true });
 
   $('btnCreate').onclick = createRoom;
   $('btnJoin').onclick = () => {
@@ -254,6 +268,7 @@
       lastGame = null;
       if (ctx.onDestroy) { try { ctx.onDestroy(); } catch {} }
       ctx.onDestroy = null; ctx.onUpdate = null; ctx.onRt = null;
+      window.sfx?.start();
     }
     if (game.seq && game.seq <= lastSeq) return;
     lastSeq = game.seq || 0;
@@ -270,7 +285,9 @@
 
     const timerEl = $('gameTimer');
     timerEl.textContent = ui.timer != null && ui.timer >= 0 ? ui.timer : '';
-    timerEl.classList.toggle('low', ui.timer != null && ui.timer <= 5);
+    const isLow = ui.timer != null && ui.timer <= 5;
+    timerEl.classList.toggle('low', isLow);
+    if (isLow && ui.timer > 0) window.sfx?.countdown();
 
     if (game.toast) toast(game.toast);
 
