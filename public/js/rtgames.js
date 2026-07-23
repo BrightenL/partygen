@@ -86,6 +86,7 @@
       cur = { t, m: SHAPES[t].map((r) => r.slice()), x: 3, y: 0 };
       if (collide(cur.m, cur.x, cur.y)) {
         alive = false;
+        window.sfx?.explode();
         ctx.send({ type: 'dead' });
       }
     }
@@ -114,7 +115,8 @@
       let cleared = 0;
       board = board.filter((row) => { if (row.every((v) => v)) { cleared++; return false; } return true; });
       while (board.length < H) board.unshift(Array(W).fill(0));
-      if (cleared) ctx.send({ type: 'clear', lines: cleared });
+      if (cleared) { window.sfx?.clearLine(cleared); ctx.send({ type: 'clear', lines: cleared }); }
+      else window.sfx?.land();
       spawn();
     }
     function applyGarbage(n) {
@@ -124,7 +126,8 @@
         row[Math.floor(rng() * W)] = 0;
         board.push(row);
       }
-      if (cur && collide(cur.m, cur.x, cur.y)) { alive = false; ctx.send({ type: 'dead' }); }
+      window.sfx?.wrong();
+      if (cur && collide(cur.m, cur.x, cur.y)) { alive = false; window.sfx?.explode(); ctx.send({ type: 'dead' }); }
     }
     function encodeBoard() {
       let bits = '';
@@ -253,6 +256,7 @@
       const lv = nextLv;
       nextLv = Math.floor(rng() * 3);
       const r = radius(lv);
+      window.sfx?.tap();
       balls.push({ x: Math.max(r, Math.min(CW - r, dropX)), y: r + 4, vx: 0, vy: 0, lv });
     });
 
@@ -278,6 +282,7 @@
             a.dead = b.dead = true;
             const lv = a.lv + 1;
             balls.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, vx: 0, vy: -2, lv });
+            window.sfx?.merge(lv);
             ctx.send({ type: 'merge', level: lv });
             continue;
           }
@@ -294,8 +299,10 @@
       }
       // 超线检测:静止球压过顶线 2 秒 → 清空自己场地(重开)
       const overLine = balls.some((b) => b.y - radius(b.lv) < 60 && Math.abs(b.vy) < 1);
+      const wasOver = overflowT > 0;
       overflowT = overLine ? overflowT + 1 : 0;
-      if (overflowT > 120) { balls = []; overflowT = 0; }
+      if (overflowT > 0 && !wasOver) window.sfx?.danger();
+      if (overflowT > 120) { balls = []; overflowT = 0; window.sfx?.explode(); }
     }
 
     loop(ctx, () => {
@@ -395,6 +402,7 @@
         lastFire = now;
         const ang = Math.atan2(aim.y - me.y, aim.x - me.x);
         me.angle = ang;
+        window.sfx?.shoot();
         bullets.push({ x: me.x, y: me.y, vx: Math.cos(ang) * 5, vy: Math.sin(ang) * 5, mine: true });
         ctx.sendRt({ fire: [me.x, me.y, ang] });
       }
@@ -408,11 +416,11 @@
             if (Math.hypot(b.x - o.x, b.y - o.y) < 16) {
               b.gone = true;
               const n = (damage.get(id) || 0) + 1;
-              if (n >= 3) { damage.set(id, 0); ctx.send({ type: 'kill', target: id }); }
-              else damage.set(id, n);
+              if (n >= 3) { damage.set(id, 0); window.sfx?.explode(); ctx.send({ type: 'kill', target: id }); }
+              else { damage.set(id, n); window.sfx?.hit(); }
             }
           }
-        } else if (Math.hypot(b.x - me.x, b.y - me.y) < 16) { b.gone = true; me.hp = Math.max(0, me.hp - 1); }
+        } else if (Math.hypot(b.x - me.x, b.y - me.y) < 16) { b.gone = true; me.hp = Math.max(0, me.hp - 1); window.sfx?.hit(); }
       }
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
@@ -524,6 +532,7 @@
       const opp = actors[oppId];
       if (opp && Math.abs(meActor.x - opp.x) < 14) {
         const real = opp.pose === 'block' ? 2 : dmg;
+        if (opp.pose === 'block') window.sfx?.tap(); else window.sfx?.hit();
         ctx.send({ type: 'hit', dmg: real });
       }
     }
@@ -542,7 +551,10 @@
       }
     };
     ctx.onUpdate = (u) => {
+      const prevMyHp = iAmA ? A.hp : iAmB ? B.hp : null;
       A = u.a; B = u.b;
+      const myHp = iAmA ? A.hp : iAmB ? B.hp : null;
+      if (prevMyHp != null && myHp != null && myHp < prevMyHp) window.sfx?.hit();
       renderHp();
       queueEl.textContent = u.queue?.length ? `等待挑战:${u.queue.join('、')}` : '';
       // 新一场:重置演员
