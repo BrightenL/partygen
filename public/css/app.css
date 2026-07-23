@@ -433,3 +433,13 @@ body::before {
 }
 @keyframes wheel-reveal-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .wheel-reveal-in { animation: wheel-reveal-in .35s ease both; }
+
+/* ── 座位入退场 ── */
+@keyframes seat-enter {
+  0% { opacity: 0; transform: scale(.6); }
+  60% { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.seat-enter { animation: seat-enter .35s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes seat-leave { to { opacity: 0; transform: scale(.6); } }
+.seat-leave { animation: seat-leave .3s ease both; pointer-events: none; }

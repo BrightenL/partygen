@@ -133,34 +133,72 @@
   }
 
   // ---------- 房间渲染 ----------
+  const AVATAR_COLORS = [
+    'linear-gradient(135deg,#7f5af0,#4f35c0)',
+    'linear-gradient(135deg,#ff8906,#e05c00)',
+    'linear-gradient(135deg,#2cb67d,#1a7a52)',
+    'linear-gradient(135deg,#ef4565,#b02040)',
+    'linear-gradient(135deg,#22d3ee,#0e7fa0)',
+    'linear-gradient(135deg,#eab308,#a07800)',
+    'linear-gradient(135deg,#f97316,#b04800)',
+    'linear-gradient(135deg,#a78bfa,#6d4fc0)',
+  ];
+  let prevMemberIds = null; // 上一次成员集合,用于 join/leave 提示;null=首次不提示
+
+  function seatHtml(m) {
+    const colorIdx = m.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
+    const mic = m.voice ? `<span class="mic${m.mic ? '' : ' muted-mic'}">${m.mic ? '🎙️' : '🔇'}</span>` : '';
+    return `<div class="avatar" style="--av-bg:${AVATAR_COLORS[colorIdx]}">${escapeHtml(m.name[0] || '?')}${mic}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
+  }
+
   function renderSeats(members) {
     const wrap = $('seats');
-    wrap.innerHTML = '';
     const slots = Math.max(8, members.length);
-    const AVATAR_COLORS = [
-      'linear-gradient(135deg,#7f5af0,#4f35c0)',
-      'linear-gradient(135deg,#ff8906,#e05c00)',
-      'linear-gradient(135deg,#2cb67d,#1a7a52)',
-      'linear-gradient(135deg,#ef4565,#b02040)',
-      'linear-gradient(135deg,#22d3ee,#0e7fa0)',
-      'linear-gradient(135deg,#eab308,#a07800)',
-      'linear-gradient(135deg,#f97316,#b04800)',
-      'linear-gradient(135deg,#a78bfa,#6d4fc0)',
-    ];
+
+    // join/leave 提示(首次进房不提示)
+    const ids = new Set(members.map((m) => m.id));
+    const isFirst = prevMemberIds === null;
+    if (!isFirst) {
+      for (const m of members) if (!prevMemberIds.has(m.id) && m.id !== meId) { toast(`${m.name} 加入了房间`); window.sfx?.pop(); }
+      if ([...prevMemberIds].some((id) => !ids.has(id))) window.sfx?.tap();
+    }
+    prevMemberIds = ids;
+
+    // keyed diff:按 mid 复用旧节点,只有新玩家播入场动画
+    const existing = new Map();
+    for (const el of [...wrap.children]) existing.set(el.dataset.mid, el);
+    const order = [];
     for (let i = 0; i < slots; i++) {
       const m = members[i];
-      const seat = document.createElement('div');
-      if (m) {
-        seat.className = 'seat' + (m.isHost ? ' host' : '') + (m.online ? '' : ' offline');
-        const colorIdx = m.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
-        const mic = m.voice ? `<span class="mic${m.mic ? '' : ' muted-mic'}">${m.mic ? '🎙️' : '🔇'}</span>` : '';
-        seat.innerHTML = `<div class="avatar" style="--av-bg:${AVATAR_COLORS[colorIdx]}">${escapeHtml(m.name[0] || '?')}${mic}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
+      const mid = m ? m.id : `empty-${i}`;
+      let seat = existing.get(mid);
+      const cls = m
+        ? 'seat' + (m.isHost ? ' host' : '') + (m.online ? '' : ' offline')
+        : 'seat empty';
+      const html = m ? seatHtml(m) : `<div class="avatar">+</div><div class="seat-name">空位</div>`;
+      if (seat) {
+        existing.delete(mid);
+        if (seat.className.replace(' seat-enter', '') !== cls) seat.className = cls;
+        if (seat.innerHTML !== html) seat.innerHTML = html;
       } else {
-        seat.className = 'seat empty';
-        seat.innerHTML = `<div class="avatar">+</div><div class="seat-name">空位</div>`;
+        seat = document.createElement('div');
+        seat.dataset.mid = mid;
+        seat.className = cls + (m && !isFirst ? ' seat-enter' : '');
+        seat.innerHTML = html;
+        seat.addEventListener('animationend', () => seat.classList.remove('seat-enter'), { once: true });
       }
-      wrap.append(seat);
+      order.push(seat);
     }
+    // 离开的座位:退场动画后移除
+    for (const [, el] of existing) {
+      el.classList.add('seat-leave');
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+      setTimeout(() => el.remove(), 500);
+    }
+    // 按序归位(顺序通常不变,几乎零移动)
+    order.forEach((el, i) => {
+      if (wrap.children[i] !== el) wrap.insertBefore(el, wrap.children[i] || null);
+    });
   }
 
   // ---------- 语音 ----------
