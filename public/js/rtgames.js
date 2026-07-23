@@ -66,7 +66,7 @@
       ['🔄', { down: rotate }],
       ['▶', { down: () => move(1) }],
       ['⬇', { down: () => { soft = true; }, up: () => { soft = false; } }],
-      ['⏬', { down: hardDrop }],
+      ['⏬ 硬降', { down: hardDrop, wide: true }],
     ]));
 
     const g2d = canvas.getContext('2d');
@@ -179,36 +179,59 @@
       }
       if (now - lastThumb > 600) { lastThumb = now; ctx.sendRt({ board: encodeBoard() }); }
       // 绘制
-      g2d.fillStyle = '#0f0e17'; g2d.fillRect(0, 0, 300, 600);
+      g2d.fillStyle = '#0d0c1a'; g2d.fillRect(0, 0, 300, 600);
+      // 网格线
+      g2d.strokeStyle = 'rgba(255,255,255,.04)'; g2d.lineWidth = 1;
+      for (let r = 0; r < H; r++) { g2d.beginPath(); g2d.moveTo(0, r*30); g2d.lineTo(300, r*30); g2d.stroke(); }
+      for (let c = 0; c < W; c++) { g2d.beginPath(); g2d.moveTo(c*30, 0); g2d.lineTo(c*30, 600); g2d.stroke(); }
       const cell = 30;
       for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
         const v = board[r][c];
         if (!v) continue;
-        g2d.fillStyle = v === 8 ? '#6b7280' : TCOLORS[v - 1];
+        const color = v === 8 ? '#4b5563' : TCOLORS[v - 1];
+        g2d.fillStyle = color;
         g2d.fillRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+        // 高光
+        g2d.fillStyle = 'rgba(255,255,255,.18)';
+        g2d.fillRect(c * cell + 2, r * cell + 2, cell - 4, 5);
       }
+      // 幽灵块(落点预览)
       if (alive && cur) {
+        let ghostY = cur.y;
+        while (!collide(cur.m, cur.x, ghostY + 1)) ghostY++;
+        g2d.fillStyle = `${TCOLORS[cur.t]}44`;
+        for (let r = 0; r < cur.m.length; r++) for (let c = 0; c < cur.m[r].length; c++)
+          if (cur.m[r][c]) g2d.fillRect((cur.x + c) * cell + 1, (ghostY + r) * cell + 1, cell - 2, cell - 2);
+        // 当前块
         g2d.fillStyle = TCOLORS[cur.t];
         for (let r = 0; r < cur.m.length; r++) for (let c = 0; c < cur.m[r].length; c++)
-          if (cur.m[r][c]) g2d.fillRect((cur.x + c) * cell + 1, (cur.y + r) * cell + 1, cell - 2, cell - 2);
+          if (cur.m[r][c]) {
+            g2d.fillRect((cur.x + c) * cell + 1, (cur.y + r) * cell + 1, cell - 2, cell - 2);
+            g2d.fillStyle = 'rgba(255,255,255,.2)';
+            g2d.fillRect((cur.x + c) * cell + 2, (cur.y + r) * cell + 2, cell - 4, 5);
+            g2d.fillStyle = TCOLORS[cur.t];
+          }
       }
       if (!alive) {
-        g2d.fillStyle = 'rgba(0,0,0,.6)'; g2d.fillRect(0, 0, 300, 600);
+        g2d.fillStyle = 'rgba(0,0,0,.72)'; g2d.fillRect(0, 0, 300, 600);
         g2d.fillStyle = '#fff'; g2d.font = 'bold 28px sans-serif'; g2d.textAlign = 'center';
         g2d.fillText('☠️ 已淘汰', 150, 290);
-        g2d.font = '14px sans-serif'; g2d.fillText('围观队友中…', 150, 320);
+        g2d.font = '14px sans-serif'; g2d.fillStyle = 'rgba(255,255,255,.6)'; g2d.fillText('围观队友中…', 150, 320);
       }
     });
   };
 
   // ============ 合成大西瓜 ============
   R.suika = (ui, ctx, root) => {
-    root.append(h('div', 'g-title', `${ui.title} · 点击投放,同款相碰合成`));
+    root.append(h('div', 'g-title', `${ui.title} · 点击投放，同款相碰合成升级`));
     const canvas = h('canvas', 'suika-board');
     const CW = 360, CH = 480;
     canvas.width = CW; canvas.height = CH;
     root.append(canvas);
-    const chainBar = h('div', 'g-sub center', ui.chain.join(' → '));
+    // 合成链展示
+    const chainBar = h('div', 'g-sub center');
+    chainBar.style.cssText = 'font-size:18px;letter-spacing:4px;padding:4px 0;';
+    chainBar.textContent = ui.chain.join(' → ');
     root.append(chainBar);
 
     const g2d = canvas.getContext('2d');
@@ -297,7 +320,7 @@
 
   // ============ 竞技场射击 ============
   R.shooter = (ui, ctx, root) => {
-    root.append(h('div', 'g-title', `${ui.title} · 左半屏移动,右半屏射击`));
+    root.append(h('div', 'g-title', `${ui.title} · 左半屏移动，右半屏射击`));
     const canvas = h('canvas', 'arena-board');
     const CW = 400, CH = 400;
     canvas.width = CW; canvas.height = CH;
@@ -401,11 +424,49 @@
       }
       // 绘制
       g2d.fillStyle = arenaColor; g2d.fillRect(0, 0, CW, CH);
-      g2d.strokeStyle = 'rgba(255,255,255,.08)';
-      for (let i = 40; i < CW; i += 40) { g2d.beginPath(); g2d.moveTo(i, 0); g2d.lineTo(i, CH); g2d.stroke(); g2d.beginPath(); g2d.moveTo(0, i); g2d.lineTo(CW, i); g2d.stroke(); }
+      // 网格
+      g2d.strokeStyle = 'rgba(255,255,255,.05)'; g2d.lineWidth = 1;
+      for (let i = 40; i < CW; i += 40) {
+        g2d.beginPath(); g2d.moveTo(i, 0); g2d.lineTo(i, CH); g2d.stroke();
+        g2d.beginPath(); g2d.moveTo(0, i); g2d.lineTo(CW, i); g2d.stroke();
+      }
       g2d.textAlign = 'center'; g2d.textBaseline = 'middle';
+      // 子弹拖尾
+      g2d.fillStyle = '#ffe066';
+      for (const b of bullets) {
+        g2d.beginPath(); g2d.arc(b.x, b.y, b.mine ? 4 : 3, 0, 7); g2d.fill();
+        g2d.globalAlpha = 0.3;
+        g2d.beginPath(); g2d.arc(b.x - b.vx * 1.5, b.y - b.vy * 1.5, 2, 0, 7); g2d.fill();
+        g2d.globalAlpha = 1;
+      }
+      // 对手
       let ei = 1;
       for (const [id, o] of others) {
+        g2d.font = '26px sans-serif';
+        g2d.save(); g2d.translate(o.x, o.y);
+        if (o.angle) g2d.rotate(o.angle + Math.PI / 2);
+        g2d.fillText(emojis[ei++ % emojis.length], 0, 0);
+        g2d.restore();
+      }
+      // 自己(带血条)
+      if (respawnFlash > 0) { g2d.globalAlpha = respawnFlash % 6 < 3 ? 0.4 : 1; respawnFlash--; }
+      g2d.font = '28px sans-serif';
+      g2d.save(); g2d.translate(me.x, me.y);
+      if (me.angle) g2d.rotate(me.angle + Math.PI / 2);
+      g2d.fillText(emojis[0], 0, 0);
+      g2d.restore();
+      g2d.globalAlpha = 1;
+      // 血条
+      g2d.fillStyle = 'rgba(0,0,0,.5)'; g2d.fillRect(me.x - 16, me.y - 24, 32, 5);
+      g2d.fillStyle = me.hp > 1 ? '#2cb67d' : '#ef4565';
+      g2d.fillRect(me.x - 16, me.y - 24, Math.max(0, me.hp / 3 * 32), 5);
+      // 摇杆
+      if (joy) {
+        g2d.strokeStyle = 'rgba(255,255,255,.3)'; g2d.lineWidth = 2;
+        g2d.beginPath(); g2d.arc(joy.ox, joy.oy, 28, 0, 7); g2d.stroke();
+        g2d.fillStyle = 'rgba(255,255,255,.4)';
+        g2d.beginPath(); g2d.arc(joy.x, joy.y, 12, 0, 7); g2d.fill();
+      }thers) {
         g2d.font = '26px sans-serif';
         g2d.fillText(emojis[ei++ % emojis.length], o.x, o.y);
       }
@@ -529,23 +590,42 @@
       if (fighting && blocking) meActor.pose = 'block';
 
       // 绘制舞台
-      g2d.fillStyle = '#141225'; g2d.fillRect(0, 0, CW, CH);
-      g2d.fillStyle = '#2a2742'; g2d.fillRect(0, CH - 34, CW, 34);
+      g2d.fillStyle = '#0e0d1c'; g2d.fillRect(0, 0, CW, CH);
+      // 地板
+      g2d.fillStyle = '#1e1c35'; g2d.fillRect(0, CH - 34, CW, 34);
+      g2d.fillStyle = '#2a2742'; g2d.fillRect(0, CH - 36, CW, 3);
+      // 背景灯光
+      g2d.save();
+      g2d.globalAlpha = 0.07;
+      g2d.fillStyle = '#7f5af0'; g2d.beginPath(); g2d.arc(CW * 0.25, 0, 120, 0, Math.PI * 2); g2d.fill();
+      g2d.fillStyle = '#ff8906'; g2d.beginPath(); g2d.arc(CW * 0.75, 0, 120, 0, Math.PI * 2); g2d.fill();
+      g2d.restore();
       g2d.textAlign = 'center'; g2d.textBaseline = 'middle';
       [A, B].forEach((f, i) => {
         const a = actors[f.id]; if (!a) return;
         const x = a.x / 100 * CW, y = CH - 60;
         const lunge = (a.pose === 'punch' ? 10 : a.pose === 'kick' ? 16 : 0) * a.facing;
+        // 阴影
+        g2d.save(); g2d.globalAlpha = 0.3;
+        g2d.fillStyle = '#000';
+        g2d.beginPath(); g2d.ellipse(x + lunge, CH - 28, 22, 7, 0, 0, Math.PI * 2); g2d.fill();
+        g2d.restore();
         g2d.save();
         g2d.translate(x + lunge, y);
         if (a.facing === -1) g2d.scale(-1, 1);
+        // 格斗者发光
+        if (a.pose === 'punch' || a.pose === 'kick') {
+          g2d.shadowColor = '#ff8906'; g2d.shadowBlur = 18;
+        }
         g2d.font = '44px sans-serif';
         g2d.fillText(myEmoji(i), 0, 0);
+        g2d.shadowBlur = 0;
         g2d.restore();
-        g2d.font = '16px sans-serif';
-        if (a.pose === 'punch') g2d.fillText('👊', x + a.facing * 34, y - 6);
-        if (a.pose === 'kick') g2d.fillText('🦶', x + a.facing * 38, y + 8);
-        if (a.pose === 'block') g2d.fillText('🛡️', x + a.facing * 26, y);
+        // 招式特效
+        g2d.font = '18px sans-serif';
+        if (a.pose === 'punch') { g2d.fillText('👊', x + a.facing * 34, y - 6); }
+        if (a.pose === 'kick')  { g2d.fillText('🦶', x + a.facing * 38, y + 8); }
+        if (a.pose === 'block') { g2d.fillText('🛡️', x + a.facing * 26, y); }
       });
     });
   };
