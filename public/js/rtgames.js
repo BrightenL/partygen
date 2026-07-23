@@ -28,6 +28,16 @@
     ctx.onDestroy = () => { alive = false; cancelAnimationFrame(raf); if (prevDestroy) prevDestroy(); };
   }
 
+  // Retina 适配:物理像素 = 逻辑尺寸 × dpr(上限 2 防低端机过载),绘制仍用逻辑坐标
+  // 显示尺寸交给 CSS 的响应式规则(.tetris-board 等),这里只放大后备缓冲区
+  function setupHiDPI(canvas, cssW, cssH) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    const g = canvas.getContext('2d');
+    g.scale(dpr, dpr);
+    return g;
+  }
+
   function btnRow(defs) {
     const row = h('div', 'ctrl-row');
     for (const [label, opts] of defs) {
@@ -57,7 +67,6 @@
     root.append(h('div', 'g-title', ui.title));
     const wrap = h('div', 'tetris-wrap');
     const canvas = h('canvas', 'tetris-board');
-    canvas.width = 300; canvas.height = 600;
     const side = h('div', 'tetris-side');
     wrap.append(canvas, side);
     root.append(wrap);
@@ -69,7 +78,7 @@
       ['⏬ 硬降', { down: hardDrop, wide: true }],
     ]));
 
-    const g2d = canvas.getContext('2d');
+    const g2d = setupHiDPI(canvas, 300, 600);
     const fx = window.FX?.pool(g2d);
     const rng = mulberry32(ui.seed ^ 0x7e77);
     let board = Array.from({ length: H }, () => Array(W).fill(0));
@@ -237,7 +246,6 @@
     root.append(h('div', 'g-title', `${ui.title} · 点击投放，同款相碰合成升级`));
     const canvas = h('canvas', 'suika-board');
     const CW = 360, CH = 480;
-    canvas.width = CW; canvas.height = CH;
     root.append(canvas);
     // 合成链展示
     const chainBar = h('div', 'g-sub center');
@@ -245,7 +253,7 @@
     chainBar.textContent = ui.chain.join(' → ');
     root.append(chainBar);
 
-    const g2d = canvas.getContext('2d');
+    const g2d = setupHiDPI(canvas, CW, CH);
     const fx = window.FX?.pool(g2d);
     const rng = mulberry32(ui.seed ^ 0x5417);
     const chain = ui.chain;
@@ -342,12 +350,11 @@
     root.append(h('div', 'g-title', `${ui.title} · 左半屏移动，右半屏射击`));
     const canvas = h('canvas', 'arena-board');
     const CW = 400, CH = 400;
-    canvas.width = CW; canvas.height = CH;
     root.append(canvas);
     const feedEl = h('div', 'history');
     root.append(feedEl);
 
-    const g2d = canvas.getContext('2d');
+    const g2d = setupHiDPI(canvas, CW, CH);
     const fx = window.FX?.pool(g2d);
     const emojis = ui.theme?.playerEmoji || ['🐱', '🐶', '🦊', '🐸', '🐼', '🐯', '🐰', '🦁'];
     const arenaColor = ui.theme?.arenaColor || '#16213e';
@@ -514,12 +521,11 @@
     root.append(hpRow);
     const canvas = h('canvas', 'fight-stage');
     const CW = 400, CH = 220;
-    canvas.width = CW; canvas.height = CH;
     root.append(canvas);
     const queueEl = h('div', 'g-sub center');
     root.append(queueEl);
 
-    const g2d = canvas.getContext('2d');
+    const g2d = setupHiDPI(canvas, CW, CH);
     const fx = window.FX?.pool(g2d);
     let freezeT = 0; // hit-stop:命中瞬间冻结几帧增强打击感
     let A = ui.a, B = ui.b;
