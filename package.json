@@ -4,7 +4,7 @@
   "description": "AI party-game generator for voice rooms — natural language in, multiplayer game out",
   "main": "server/index.js",
   "scripts": {
-    "test": "node test/smoke.js",
+    "test": "node test/syntax.js && node test/smoke.js",
     "start": "node server/index.js"
   },
   "keywords": [],
