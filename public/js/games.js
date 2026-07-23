@@ -208,8 +208,14 @@
   // ---- 数字炸弹 ----
   R.bomb = (ui, ctx, root) => {
     root.append(h('div', 'g-title', ui.title));
+    const urgency = Math.max(0.3, 1 - (ui.high - ui.low) / 100);
+    const bombEl = document.createElement('div');
+    bombEl.className = 'bomb-emoji';
+    bombEl.style.setProperty('--bomb-speed', `${Math.max(0.25, 1 - urgency * 0.7}s`);
+    bombEl.textContent = '💣';
+    root.append(bombEl);
     const range = h('div', 'bomb-range');
-    range.append(document.createTextNode('💣 '), h('span', '', `${ui.low} ~ ${ui.high}`));
+    range.innerHTML = `<span>${ui.low}</span> ~ <span>${ui.high}</span>`;
     root.append(range);
     const hist = h('div', 'history');
     (ui.history || []).forEach((x) => hist.append(h('span', 'h', `${x.name}: ${x.n}`)));
@@ -217,10 +223,14 @@
     if (ui.actionFor === ctx.meId) {
       const row = h('div', 'numpad-row');
       const input = h('input', 'input'); input.type = 'number'; input.placeholder = `${ui.low}~${ui.high}`;
+      input.style.fontSize = '22px'; input.style.textAlign = 'center';
       const btn = h('button', 'btn btn-primary', '猜!');
       btn.onclick = () => { const n = Number(input.value); if (n) ctx.send({ type: 'guess', n }); };
       row.append(input, btn);
-      root.append(h('div', 'turn-banner'), row);
+      const banner = h('div', 'turn-banner');
+      banner.append(h('div', 'g-sub', '轮到你了'), h('div', 'who', '你'));
+      root.append(banner, row);
+      setTimeout(() => input.focus(), 80);
     } else {
       const banner = h('div', 'turn-banner');
       banner.append(h('div', 'g-sub', '正在抉择'), h('div', 'who', ui.current));
@@ -232,8 +242,14 @@
   R.react = (ui, ctx, root) => {
     root.append(h('div', 'g-title', ui.title), h('div', 'react-instr', ui.instruction));
     const pad = h('div', 'react-pad', ui.shown.name);
-    pad.style.background = ui.shown.hex;
-    pad.onclick = () => { ctx.send({ type: 'tap' }); pad.style.opacity = .6; };
+    pad.style.background = `radial-gradient(circle at 35% 35%, ${ui.shown.hex}cc, ${ui.shown.hex})`;
+    pad.style.letterSpacing = '2px';
+    pad.onclick = () => {
+      window.sfx?.tap();
+      pad.style.opacity = .7;
+      pad.style.transform = 'scale(.96)';
+      ctx.send({ type: 'tap' });
+    };
     root.append(pad);
     const feed = h('div', 'history');
     (ui.feed || []).forEach((f) => feed.append(h('span', 'h', `${f.correct ? '✅' : '❌'} ${f.name}`)));
@@ -272,6 +288,7 @@
 
   // ---- 结算 ----
   R.final = (ui, ctx, root) => {
+    window.sfx?.win();
     root.append(h('div', 'confetti', '🎉'), h('div', 'final-title', ui.title));
     if (ui.subtitle) root.append(h('p', 'g-sub center', ui.subtitle));
     if (ui.scores) root.append(rankList(ui.scores));

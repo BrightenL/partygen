@@ -137,13 +137,24 @@
     const wrap = $('seats');
     wrap.innerHTML = '';
     const slots = Math.max(8, members.length);
+    const AVATAR_COLORS = [
+      'linear-gradient(135deg,#7f5af0,#4f35c0)',
+      'linear-gradient(135deg,#ff8906,#e05c00)',
+      'linear-gradient(135deg,#2cb67d,#1a7a52)',
+      'linear-gradient(135deg,#ef4565,#b02040)',
+      'linear-gradient(135deg,#22d3ee,#0e7fa0)',
+      'linear-gradient(135deg,#eab308,#a07800)',
+      'linear-gradient(135deg,#f97316,#b04800)',
+      'linear-gradient(135deg,#a78bfa,#6d4fc0)',
+    ];
     for (let i = 0; i < slots; i++) {
       const m = members[i];
       const seat = document.createElement('div');
       if (m) {
         seat.className = 'seat' + (m.isHost ? ' host' : '') + (m.online ? '' : ' offline');
+        const colorIdx = m.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
         const mic = m.voice ? `<span class="mic${m.mic ? '' : ' muted-mic'}">${m.mic ? '🎙️' : '🔇'}</span>` : '';
-        seat.innerHTML = `<div class="avatar">${escapeHtml(m.name[0] || '?')}${mic}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
+        seat.innerHTML = `<div class="avatar" style="--av-bg:${AVATAR_COLORS[colorIdx]}">${escapeHtml(m.name[0] || '?')}${mic}</div><div class="seat-name">${escapeHtml(m.name)}</div>`;
       } else {
         seat.className = 'seat empty';
         seat.innerHTML = `<div class="avatar">+</div><div class="seat-name">空位</div>`;

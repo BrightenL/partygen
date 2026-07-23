@@ -251,3 +251,130 @@ canvas.board { width: 100%; background: #fffffe; border-radius: 14px; touch-acti
 .opt.correct { animation: bounce-in .3s ease; }
 .opt.wrong   { animation: shake .35s ease; }
 .timer.low { color: var(--bad); animation: pulse .4s infinite alternate; text-shadow: 0 0 12px rgba(239,69,101,.6); }
+
+/* ── 背景极光动效 ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(127,90,240,.09) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255,137,6,.07) 0%, transparent 60%);
+  animation: aurora 14s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  0%   { opacity: .6; transform: scale(1); }
+  50%  { opacity: 1;  transform: scale(1.06) rotate(1deg); }
+  100% { opacity: .7; transform: scale(.97) rotate(-1deg); }
+}
+
+/* ── 卡片玻璃质感 ── */
+.card {
+  background: rgba(33,31,51,.72);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* ── 头像颜色由 JS 注入 --av-bg ── */
+.avatar { background: var(--av-bg, linear-gradient(135deg, var(--card2), #383358)); }
+
+/* ── 选项入场动画 ── */
+@keyframes opt-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.opt { animation: opt-in .22s ease both; }
+.opt:nth-child(1){animation-delay:.04s} .opt:nth-child(2){animation-delay:.09s}
+.opt:nth-child(3){animation-delay:.14s} .opt:nth-child(4){animation-delay:.19s}
+
+/* ── 排行榜条形动画 ── */
+@keyframes bar-grow { from { width: 0 !important; } }
+.bar { animation: bar-grow .65s cubic-bezier(.22,1,.36,1) both; }
+.rank-item:nth-child(1) .bar{animation-delay:.05s} .rank-item:nth-child(2) .bar{animation-delay:.12s}
+.rank-item:nth-child(3) .bar{animation-delay:.19s} .rank-item:nth-child(4) .bar{animation-delay:.26s}
+.rank-item:nth-child(5) .bar{animation-delay:.33s}
+@keyframes rank-in { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:translateX(0); } }
+.rank-item { animation: rank-in .3s ease both; }
+.rank-item:nth-child(1){animation-delay:.05s} .rank-item:nth-child(2){animation-delay:.1s}
+.rank-item:nth-child(3){animation-delay:.15s} .rank-item:nth-child(4){animation-delay:.2s}
+
+/* ── 私有词条呼吸光晕 ── */
+.private-bar {
+  box-shadow: 0 0 20px rgba(255,137,6,.1), inset 0 1px 0 rgba(255,255,255,.05);
+  animation: private-pulse 2.5s ease-in-out infinite;
+}
+@keyframes private-pulse {
+  0%,100% { box-shadow: 0 0 16px rgba(255,137,6,.1); }
+  50%      { box-shadow: 0 0 32px rgba(255,137,6,.28); }
+}
+
+/* ── 炸弹游戏 ── */
+.bomb-emoji {
+  display: block; text-align: center; font-size: 60px;
+  filter: drop-shadow(0 4px 18px rgba(239,69,101,.45));
+  animation: bomb-tick var(--bomb-speed, 1s) ease-in-out infinite;
+}
+@keyframes bomb-tick {
+  0%,100% { transform: scale(1) rotate(-4deg); }
+  50%      { transform: scale(1.1) rotate(4deg); }
+}
+
+/* ── 快速反应 ── */
+.react-pad {
+  border-radius: 24px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+  transition: transform .08s, box-shadow .08s;
+}
+.react-pad:active { transform: scale(.95); box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+
+/* ── 结算屏 ── */
+@keyframes confetti-drop {
+  from { transform: translateY(-24px) rotate(-8deg); opacity: 0; }
+  to   { transform: translateY(0) rotate(0deg); opacity: 1; }
+}
+.confetti { animation: confetti-drop .5s cubic-bezier(.22,1,.36,1) both; }
+.final-title { animation: bounce-in .4s .12s cubic-bezier(.22,1,.36,1) both; }
+
+/* ── Logo 浮动 ── */
+.logo { animation: logo-float 3.2s ease-in-out infinite; }
+@keyframes logo-float {
+  0%,100% { transform: translateY(0);   filter: drop-shadow(0 6px 24px rgba(127,90,240,.5)); }
+  50%      { transform: translateY(-7px); filter: drop-shadow(0 14px 36px rgba(127,90,240,.75)); }
+}
+
+/* ── 房间号渐变 ── */
+.room-code b {
+  background: linear-gradient(90deg, var(--accent), #ffb347);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  font-size: 24px; letter-spacing: 4px;
+}
+
+/* ── 主按钮增强 ── */
+.btn-primary {
+  background: linear-gradient(135deg, #9b6dff, var(--primary2));
+  box-shadow: 0 6px 24px rgba(127,90,240,.4), inset 0 1px 0 rgba(255,255,255,.15);
+}
+.btn-primary:active { box-shadow: 0 2px 8px rgba(127,90,240,.25); }
+
+/* ── 空位脉冲 ── */
+.seat.empty .avatar { animation: empty-pulse 2.2s ease-in-out infinite; }
+@keyframes empty-pulse {
+  0%,100% { border-color: #45406e; color: #45406e; }
+  50%      { border-color: #7060b0; color: #7060b0; }
+}
+
+/* ── 生成状态卡片 ── */
+.gen-status {
+  background: rgba(127,90,240,.08); border: 1px solid rgba(127,90,240,.2);
+  border-radius: 12px; padding: 14px;
+}
+
+/* ── 问题文字渐变 ── */
+.g-question {
+  background: linear-gradient(160deg, var(--text) 55%, rgba(200,190,255,.8));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+/* ── 座位入场 ── */
+@keyframes seat-in { from { opacity:0; transform:scale(.85); } to { opacity:1; transform:scale(1); } }
+.seat { animation: seat-in .25s ease both; }
+
+/* ── 计分条滚动 ── */
+.scorebar { scrollbar-width: none; }
+.scorebar::-webkit-scrollbar { display: none; }
